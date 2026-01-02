@@ -1,12 +1,12 @@
 ---
 name: photo-studio-skill
-description: Generate portrait and group photos using Seedream 4.5 AI. Supports celebrity photos, personal portraits, couple photos, and family portraits with customizable poses, templates, and backgrounds. Use when users want to create professional AI-enhanced photos.
+description: Generate portrait and group photos using Seedream 4.5 AI. Supports celebrity photos, personal portraits, couple photos, family portraits, and free mode with custom prompts. Use when users want to create professional AI-enhanced photos.
 license: MIT
 compatibility: Requires Python 3.8+, ByteDance ARK API key for image generation, internet access
 allowed-tools: Bash(python:*) Read Write
 metadata:
   author: AI Assistant
-  version: "2.1"
+  version: "2.2"
   entrypoint: scripts/main.py
 ---
 
@@ -21,6 +21,7 @@ The Photo Studio skill takes user photos and generates professional AI-enhanced 
 - **Personal Portraits**: Professional headshots in various styles
 - **Couple Portraits**: Romantic or friendly couple photos
 - **Family Portraits**: Professional family photos (3-6 people)
+- **Free Mode**: Custom prompt generation with 1-14 reference photos (NEW!)
 
 ## When to Use This Skill
 
@@ -29,6 +30,7 @@ The Photo Studio skill takes user photos and generates professional AI-enhanced 
 - User wants photos with movie characters
 - User needs AI-enhanced portraits with specific styles
 - User wants to create social media content with professional quality
+- User wants complete creative control with custom prompts (FREE MODE)
 
 ## Prerequisites
 
@@ -51,12 +53,21 @@ Choose from available scenarios:
 2. **个人写真** (Portrait) - Professional personal portraits
 3. **双人合影** (Couple) - Couple or friend photos
 4. **全家合影** (Family) - Family group photos (3-6 people)
+5. **自由模式** (Free Mode) - Custom prompt generation with full creative control
 
 ### Step 2: Collect Inputs
 Based on selected scenario, provide:
+
+**For Celebrity/Portrait/Couple/Family Scenarios:**
 - **Photos**: Upload 1-6 photos as required
 - **Styles/Characters/Templates**: Choose from available options
 - **Background** (for couple/family): Select custom background (optional)
+- **Count**: Specify number of images to generate
+
+**For Free Mode (Custom Prompt):**
+- **Photos**: Upload 1-14 reference photos
+- **Custom Prompt** (REQUIRED): Describe the desired scene, style, atmosphere, etc.
+- **Negative Prompt** (OPTIONAL): Specify what to exclude (e.g., "modern, digital, blurry")
 - **Count**: Specify number of images to generate
 
 **Available Options:**
@@ -64,6 +75,14 @@ Based on selected scenario, provide:
 - **Couple**: 12 poses + 6 backgrounds (Side by side, Hugging, etc.)
 - **Family**: 8 templates + 6 backgrounds (Classic, Casual, Outdoor, etc.)
 - **Celebrity**: 18+ characters (Iron Man, Wonder Woman, Spider-Man, etc.)
+- **Free Mode**: Unlimited creativity with custom prompts
+
+**Free Mode Prompt Examples:**
+- "A futuristic cyberpunk portrait with neon lights and holographic elements"
+- "Renaissance oil painting style, dramatic lighting, classical art"
+- "Group photo on Mars surface, wearing space suits, cinematic atmosphere"
+- "1970s vintage photography style, film grain, warm tones, retro feel"
+- "Anime style, Studio Ghibli inspired, soft pastel colors, fantasy setting"
 
 ### Step 3: Generate Images
 The skill will:
@@ -109,6 +128,21 @@ python scripts/main.py generate --photos "$PHOTO1,$PHOTO2,$PHOTO3" \
     --scenario family \
     --template "温馨家庭聚会" \
     --background "户外公园" \
+    --non-interactive
+
+# Free mode with custom prompt
+python scripts/main.py generate --photo "$USER_PHOTO" \
+    --scenario free \
+    --prompt "A futuristic cyberpunk portrait with neon lighting" \
+    --count 3 \
+    --non-interactive
+
+# Free mode with multiple photos and negative prompt
+python scripts/main.py generate --photos "$PHOTO1,$PHOTO2,$PHOTO3" \
+    --scenario free \
+    --prompt "A group dinner party around a candlelit table, warm atmosphere" \
+    --negative-prompt "modern, digital, high contrast" \
+    --count 2 \
     --non-interactive
 ```
 
@@ -190,8 +224,14 @@ python scripts/main.py generate [options]
 - `--background` - Background name (6 options available, default: template's built-in scene)
 - `--count, -c` - Number of images
 
+**For Free Mode Scenario:**
+- `--photo` or `--photos` - Path(s) to reference photo(s) (1-14 photos)
+- `--prompt` - Custom prompt describing desired scene, style, atmosphere (REQUIRED)
+- `--negative-prompt` - Optional negative prompt to exclude unwanted elements
+- `--count, -c` - Number of images to generate
+
 **Common Options:**
-- `--scenario, -s` - Scenario type (celebrity, portrait, couple, family)
+- `--scenario, -s` - Scenario type (celebrity, portrait, couple, family, free)
 - `--skip-review` - Skip image review step
 - `--non-interactive, -ni` - Run in non-interactive mode
 
@@ -426,6 +466,32 @@ python scripts/main.py generate --photos "photo1.jpg,photo2.jpg,photo3.jpg" --sc
     --template "温馨家庭聚会" --background "户外公园"
 ```
 
+### Free Mode Examples
+
+```bash
+# Single photo with vintage style
+python scripts/main.py generate --photo "user.jpg" --scenario free \
+    --prompt "1970s vintage photography style, film grain, warm tones"
+
+# Multiple photos with scene description
+python scripts/main.py generate --photos "p1.jpg,p2.jpg,p3.jpg" --scenario free \
+    --prompt "A group photo on Mars surface, wearing space suits, cinematic lighting"
+
+# With negative prompt to exclude unwanted elements
+python scripts/main.py generate --photo "user.jpg" --scenario free \
+    --prompt "Renaissance art style portrait, oil painting" \
+    --negative-prompt "modern, digital, low quality"
+
+# Artistic style
+python scripts/main.py generate --photo "user.jpg" --scenario free \
+    --prompt "Impressionist watercolor painting, soft pastel colors, garden setting"
+
+# Generate multiple variations
+python scripts/main.py generate --photo "user.jpg" --scenario free \
+    --prompt "A futuristic cyberpunk portrait with neon lighting" \
+    --count 4
+```
+
 ### Non-Interactive Example (For Agent Integration)
 
 ```bash
@@ -440,6 +506,16 @@ python scripts/main.py generate --photos "photo1.jpg,photo2.jpg" --scenario coup
 # Family photos with template and background
 python scripts/main.py generate --photos "photo1.jpg,photo2.jpg,photo3.jpg" --scenario family \
     --template "温馨家庭聚会" --background "户外公园" --non-interactive
+
+# Free mode with custom prompt (fully automated)
+python scripts/main.py generate --photo user.jpg --scenario free \
+    --prompt "A futuristic cyberpunk portrait with neon lighting" --count 3 --non-interactive
+
+# Free mode with negative prompt
+python scripts/main.py generate --photos "p1.jpg,p2.jpg,p3.jpg" --scenario free \
+    --prompt "A group dinner party around a candlelit table, warm atmosphere" \
+    --negative-prompt "modern, digital, harsh lighting" \
+    --non-interactive
 ```
 
 ## Troubleshooting

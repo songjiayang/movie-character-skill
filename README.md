@@ -8,11 +8,12 @@ A powerful AI photo generation skill for Claude Code/Agent Skills ecosystem that
 
 ## Features
 
-- **Multiple Photo Scenarios**: Support for 4 generation types
-  - 明星合影 (Celebrity Photos) - Take photos with movie characters
-  - 个人写真 (Personal Portraits) - Professional headshots with standard poses (15+ styles)
-  - 双人合影 (Couple Photos) - Romantic or friendly couple portraits with gender detection (12 poses, 6 backgrounds)
-  - 全家合影 (Family Photos) - Professional family group photos with person count control (3-6 people, 8 templates, 6 backgrounds)
+ - **Multiple Photo Scenarios**: Support for 5 generation types
+   - 明星合影 (Celebrity Photos) - Take photos with movie characters
+   - 个人写真 (Personal Portraits) - Professional headshots with standard poses (15+ styles)
+   - 双人合影 (Couple Photos) - Romantic or friendly couple portraits with gender detection (12 poses, 6 backgrounds)
+   - 全家合影 (Family Photos) - Professional family group photos with person count control (3-6 people, 8 templates, 6 backgrounds)
+   - 自由模式 (Free Mode) - Custom prompt generation with 1-14 reference photos
 - **AI Image Generation**: Use ByteDance's Seedream 4.5 for high-quality image-to-image transformations
 - **Multi-Photo Support**: Process up to 6 reference photos for group scenarios with unique preprocessing
 - **Non-interactive Mode**: Full automation for agent integration via CLI
@@ -279,6 +280,39 @@ Generate professional family group photos.
 python scripts/main.py generate --photos "photo1.jpg,photo2.jpg,photo3.jpg" --scenario family
 ```
 
+### 5. 自由模式 (Free Mode)
+
+Generate images with custom prompts and full control.
+
+**Features:**
+- Support for 1-14 reference photos
+- Completely custom prompt input
+- Optional negative prompt
+- No template restrictions
+- Full creative control
+
+**Example:**
+```bash
+# Single photo with custom prompt
+python scripts/main.py generate --photo "photo.jpg" --scenario free \
+    --prompt "A futuristic cyberpunk portrait with neon lights"
+
+# Multiple photos with custom prompt
+python scripts/main.py generate --photos "photo1.jpg,photo2.jpg" --scenario free \
+    --prompt "A group photo on the surface of Mars, wearing space suits"
+
+# Multiple images with negative prompt
+python scripts/main.py generate --photo "photo.jpg" --scenario free \
+    --prompt "Renaissance art style portrait" \
+    --negative-prompt "modern, digital, low quality" \
+    --count 3
+
+# Many reference photos for complex scene
+python scripts/main.py generate --photos "p1.jpg,p2.jpg,p3.jpg,p4.jpg,p5.jpg" \
+    --scenario free \
+    --prompt "A dinner party scene with all characters around a table, candlelight atmosphere"
+```
+
 ## Agent Integration
 
 For Claude Code agent integration, use CLI commands with `--non-interactive` flag:
@@ -302,6 +336,12 @@ python scripts/main.py generate --photos "$PHOTO1,$PHOTO2" \
 python scripts/main.py generate --photos "$PHOTO1,$PHOTO2,$PHOTO3" \
     --scenario family \
     --template "温馨家庭聚会" \
+    --non-interactive
+
+# Generate free mode photos
+python scripts/main.py generate --photo "$USER_PHOTO" \
+    --scenario free \
+    --prompt "A futuristic cyberpunk portrait with neon lighting" \
     --non-interactive
 ```
 
