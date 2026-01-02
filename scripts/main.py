@@ -34,6 +34,8 @@ def setup_argparse():
 Examples:
   python main.py generate --photo path/to/photo.jpg --scenario portrait
   python main.py generate --photos photo1.jpg,photo2.jpg --scenario couple
+  python main.py generate --photo photo.jpg --scenario free --prompt "A futuristic cyberpunk portrait" --count 3
+  python main.py generate --photos p1.jpg,p2.jpg,p3.jpg --scenario free --prompt "A group photo on the moon surface"
   python main.py list-scenarios
   python main.py list-styles --scenario portrait
         """
@@ -45,11 +47,13 @@ Examples:
     generate_parser = subparsers.add_parser("generate", help="Start the generation process")
     generate_parser.add_argument("--photo", "-p", help="Path to user photo (for single photo scenarios)")
     generate_parser.add_argument("--photos", help="Comma-separated photo paths (for multi-photo scenarios)")
-    generate_parser.add_argument("--scenario", "-s", help="Scenario type (celebrity, portrait, couple, family)")
+    generate_parser.add_argument("--scenario", "-s", help="Scenario type (celebrity, portrait, couple, family, free)")
     generate_parser.add_argument("--style", help="Style name (for portrait scenario)")
     generate_parser.add_argument("--pose", help="Pose name (for couple scenario)")
     generate_parser.add_argument("--template", help="Template name (for family scenario)")
     generate_parser.add_argument("--background", help="Background name (for couple/family scenarios)")
+    generate_parser.add_argument("--prompt", help="Custom prompt (for free mode scenario)")
+    generate_parser.add_argument("--negative-prompt", help="Negative prompt (optional, for free mode)")
     generate_parser.add_argument("--count", "-c", type=int, help="Number of images to generate")
     generate_parser.add_argument("--characters", "-ch", help="Comma-separated character names (for celebrity scenario)")
     generate_parser.add_argument("--skip-review", action="store_true", help="Skip image review step")
@@ -300,6 +304,51 @@ def command_generate(args):
             )
             generated_images = result if result else []
 
+        elif scenario_id == 'free':
+            # Free mode scenario - custom prompt with 1-14 photos
+            photos_arg = getattr(args, 'photos', None)
+
+            # Support both --photos and --photo for free mode
+            if photos_arg:
+                photo_paths = [p.strip() for p in photos_arg.split(',')]
+            elif hasattr(args, 'photo') and args.photo:
+                photo_paths = [args.photo]
+            else:
+                print("❌ --photos or --photo parameter is required for free mode.")
+                return 1
+
+            # Validate all photos exist
+            for p in photo_paths:
+                if not Path(p).exists():
+                    print(f"❌ Photo not found: {p}")
+                    return 1
+
+            # Validate photo count
+            if len(photo_paths) > 14:
+                print(f"⚠️ Maximum 14 photos allowed, using first 14")
+                photo_paths = photo_paths[:14]
+
+            # Get custom prompt
+            custom_prompt = getattr(args, 'prompt', None)
+            if not custom_prompt:
+                print("❌ --prompt parameter is required for free mode.")
+                return 1
+
+            # Get count
+            count = getattr(args, 'count', 1)
+
+            # Get negative prompt (optional)
+            negative_prompt = getattr(args, 'negative_prompt', "")
+
+            # Generate free mode images
+            result = image_gen.generate_free_mode_images(
+                photo_paths,
+                custom_prompt,
+                count,
+                negative_prompt
+            )
+            generated_images = result if result else []
+
         else:
             # Celebrity scenario (default) - validate photo first
             photo_path = args.photo
@@ -520,6 +569,33 @@ def command_generate(args):
 
         # Show generated images
         interaction.show_generated_images(generated_images)
+
+        return 0
+    elif scenario_id == 'free':
+        # Free mode interactive flow
+        inputs = interaction.collect_free_mode_inputs()
+
+        if not inputs:
+            print("❌ Failed to collect free mode inputs.")
+            return 1
+
+        # Generate free mode images
+        print("\n" + "=" * 60)
+        print("🖼️  Image Generation Started")
+        print("=" * 60)
+
+        result = image_gen.generate_free_mode_images(
+            inputs["photos"],
+            inputs["prompt"],
+            inputs["count"],
+            inputs["negative_prompt"]
+        )
+
+        generated_images = result if result else []
+
+        # Show generated images
+        if generated_images:
+            interaction.show_generated_images(generated_images)
 
         return 0
     else:

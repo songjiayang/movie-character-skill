@@ -75,6 +75,17 @@
         "Family portrait with exactly {count} people, {style}, {scene}. Happy family atmosphere, natural expressions.",
         "Traditional family photo, {count} family members, {style}, {scene}. Warm and loving atmosphere."
       ]
+    },
+    {
+      "id": "free",
+      "name": "自由模式",
+      "description": "自定义prompt生成，支持1-14张参考图片",
+      "input_type": "multiple_photos",
+      "required_photos": 1,
+      "max_photos": 14,
+      "data_file": null,
+      "prompt_templates": [],
+      "custom_prompt": true
     }
   ],
   "global_settings": {

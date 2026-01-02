@@ -44,9 +44,9 @@ class InteractionManager:
         Let user select which scenario to use
         Returns: selected scenario dict
         """
-        print("\n" + "=" * 60)
+        print("\n" + "============================================================")
         print("📷 Photo Studio - Scenario Selection")
-        print("=" * 60)
+        print("============================================================")
 
         scenarios = self.config.get_all_scenarios()
 
@@ -131,9 +131,9 @@ class InteractionManager:
         """
         Collect inputs for portrait scenario
         """
-        print("\n" + "=" * 60)
+        print("\n" + "============================================================")
         print("🎨 Portrait Photography Setup")
-        print("=" * 60)
+        print("============================================================")
 
         # Get photo
         photos = self.collect_photos_for_scenario(scenario)
@@ -176,9 +176,9 @@ class InteractionManager:
         """
         Collect inputs for couple scenario
         """
-        print("\n" + "=" * 60)
+        print("\n" + "============================================================")
         print("👫 Couple Portrait Setup")
-        print("=" * 60)
+        print("============================================================")
 
         # Get photos
         photos = self.collect_photos_for_scenario(scenario)
@@ -222,9 +222,9 @@ class InteractionManager:
         """
         Collect inputs for family scenario
         """
-        print("\n" + "=" * 60)
+        print("\n" + "============================================================")
         print("👨‍👩‍👧‍👦 Family Portrait Setup")
-        print("=" * 60)
+        print("============================================================")
 
         # Get photos
         photos = self.collect_photos_for_scenario(scenario)
@@ -267,9 +267,9 @@ class InteractionManager:
         Collect all necessary inputs from user through interactive prompts
         Returns: dictionary with collected inputs
         """
-        print("=" * 60)
+        print("============================================================")
         print("Movie Character Generation Wizard")
-        print("=" * 60)
+        print("============================================================")
 
         inputs = {}
 
@@ -417,7 +417,6 @@ class InteractionManager:
 
                     if json_input.strip():
                         try:
-                            import json
                             chars_from_json = json.loads(json_input)
                             if isinstance(chars_from_json, list):
                                 for char in chars_from_json:
@@ -438,7 +437,6 @@ class InteractionManager:
                     file_path = input("\nEnter path to JSON file: ").strip()
                     if Path(file_path).exists():
                         try:
-                            import json
                             with open(file_path, 'r', encoding='utf-8') as f:
                                 chars_from_file = json.load(f)
                             if isinstance(chars_from_file, list):
@@ -512,9 +510,9 @@ class InteractionManager:
         """
         Display generated images and allow user to review
         """
-        print("\n" + "=" * 60)
+        print("\n" + "============================================================")
         print("📸 Generated Images Review")
-        print("=" * 60)
+        print("============================================================")
 
         if not image_paths:
             print("No images generated yet.")
@@ -641,3 +639,111 @@ class InteractionManager:
         """Update a specific state value"""
         self.current_state[key] = value
         self._save_state()
+
+    def collect_free_mode_inputs(self):
+        """
+        Collect inputs for free mode scenario
+        Returns: dictionary with collected inputs
+        """
+        print("\n" + "============================================================")
+        print("🎨 Free Mode - Custom Prompt Generation")
+        print("============================================================")
+
+        inputs = {}
+
+        # Step1: Collect reference photos
+        print("\n📸 Step 1: Reference Photos")
+        print("----------------------------------------")
+        print("Free mode supports 1-14 reference photos.")
+        print("Provide photo paths (comma-separated for multiple):")
+
+        while True:
+            photos_input = input("> ").strip()
+            if not photos_input:
+                print("❌ At least one photo is required.")
+                continue
+
+            # Parse photo paths
+            photo_paths = [p.strip() for p in photos_input.split(',')]
+
+            # Validate all photos exist
+            all_valid = True
+            for p in photo_paths:
+                if not Path(p).exists():
+                    print(f"❌ Photo not found: {p}")
+                    all_valid = False
+                    break
+
+            if not all_valid:
+                continue
+
+            # Check photo count
+            if len(photo_paths) > 14:
+                print(f"⚠️ Maximum 14 photos allowed, using first 14")
+                photo_paths = photo_paths[:14]
+
+            inputs["photos"] = photo_paths
+            print(f"✓ Selected {len(photo_paths)} photo(s)")
+            break
+
+        # Step 2: Collect custom prompt
+        print("\n📝 Step 2: Custom Prompt")
+        print("-" * 40)
+        print("Describe the scene, style, atmosphere, and any specific requirements.")
+        print("Examples:")
+        print("  - 'A futuristic cyberpunk portrait with neon lights'")
+        print("  - 'Renaissance oil painting style, dramatic lighting'")
+        print("  - 'A group photo on Mars surface, wearing space suits'")
+        print("  - '1970s vintage photography style, film grain, warm tones'")
+
+        while True:
+            prompt = input("\nEnter your custom prompt: ").strip()
+            if not prompt:
+                print("❌ Custom prompt is required.")
+                continue
+            inputs["prompt"] = prompt
+            print(f"✓ Prompt: {prompt[:80]}...")
+            break
+
+        # Step 3: Collect optional negative prompt
+        print("\n🚫 Step 3: Negative Prompt (Optional)")
+        print("-" * 40)
+        print("Specify elements to exclude from generated image.")
+        print("Examples: 'modern, digital, blurry, low quality'")
+        print("Press Enter to skip negative prompt.")
+
+        negative_prompt = input("Negative prompt: ").strip()
+        inputs["negative_prompt"] = negative_prompt if negative_prompt else ""
+        if negative_prompt:
+            print(f"✓ Negative prompt: {negative_prompt[:60]}...")
+        else:
+            print("✓ No negative prompt")
+
+        # Step 4: Collect image count
+        print("\n🔢 Step 4: Number of Images")
+        print("-" * 40)
+        print("How many images would you like to generate? (1-10)")
+        print("Press Enter for default (1):")
+
+        count_input = input("> ").strip()
+        if count_input:
+            try:
+                count = int(count_input)
+                if count < 1 or count > 10:
+                    print("Please enter a number between 1 and 10. Using default (1).")
+                    count = 1
+            except ValueError:
+                print("Invalid number. Using default (1).")
+                count = 1
+        else:
+            count = 1
+
+        inputs["count"] = count
+        print(f"✓ Will generate {count} image(s)")
+
+        # Save state
+        self.current_state["free_mode_inputs"] = inputs
+        self._save_state()
+
+        print("\n✅ Free mode input collection complete!")
+        return inputs

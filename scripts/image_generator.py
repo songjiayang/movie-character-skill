@@ -726,11 +726,34 @@ class ImageGenerator:
         except requests.exceptions.Timeout:
             print(f"\n⚠️ Timeout. Skipping.")
             return None
+        except requests.exceptions.HTTPError as e:
+            print(f"\n❌ HTTP Error: {e}")
+            # Print detailed error response
+            if e.response is not None:
+                print(f"\nStatus Code: {e.response.status_code}")
+                print(f"Response Headers: {dict(e.response.headers)}")
+                try:
+                    error_detail = e.response.json()
+                    print(f"\nError Details:")
+                    print(json.dumps(error_detail, indent=2, ensure_ascii=False))
+                except:
+                    print(f"\nResponse Text: {e.response.text[:500]}")
+            return None
         except requests.exceptions.RequestException as e:
             print(f"\n❌ API error: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"\nStatus Code: {e.response.status_code}")
+                try:
+                    error_detail = e.response.json()
+                    print(f"\nError Details:")
+                    print(json.dumps(error_detail, indent=2, ensure_ascii=False))
+                except:
+                    print(f"\nResponse Text: {e.response.text[:500]}")
             return None
         except Exception as e:
             print(f"\n❌ Unexpected error: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def regenerate_image(self, user_photo_path: str, character: Dict, index: int) -> Optional[str]:
@@ -822,3 +845,146 @@ class ImageGenerator:
 
         # Return mock image
         return self._generate_mock_response(filename)
+
+    def generate_free_mode_images(self, photos: List[str], prompt: str, count: int = 1,
+                                 negative_prompt: str = "") -> List[str]:
+        """
+        Generate images in free mode with custom prompt
+
+        Args:
+            photos: List of reference photo paths (1-14 photos supported)
+            prompt: Custom prompt for image generation
+            count: Number of images to generate
+            negative_prompt: Optional negative prompt
+
+        Returns:
+            List of generated image paths
+        """
+        print("\n" + "=" * 60)
+        print("🎨 Free Mode Generation Started")
+        print("=" * 60)
+
+        # Validate photo count
+        if not photos:
+            print("❌ At least one photo is required")
+            return []
+
+        if len(photos) > 14:
+            print(f"⚠️ Maximum 14 photos allowed, using first 14")
+            photos = photos[:14]
+
+        print(f"📸 Processing {len(photos)} reference photo(s)")
+        print(f"📝 Custom prompt: {prompt[:100]}...")
+
+        # Preprocess all photos with unique filenames
+        processed_photos = []
+        for i, photo in enumerate(photos):
+            processed_photo = self.preprocess_user_photo_with_index(photo, i)
+            processed_photos.append(processed_photo)
+
+        generated_images = []
+        failed_generations = []
+
+        for i in range(count):
+            print(f"\nGenerating image {i+1}/{count}")
+
+            # Build complete prompt with instructions
+            full_prompt = self._build_free_mode_prompt(prompt, len(photos))
+
+            # Generate with multiple reference photos
+            image_path = self._generate_with_multiple_photos_and_prompts(
+                processed_photos,
+                full_prompt,
+                negative_prompt,
+                f"free_mode_{i:03d}",
+                i
+            )
+
+            if image_path:
+                generated_images.append(image_path)
+                self.interaction.update_state("generated_images", generated_images)
+            else:
+                failed_generations.append(str(i+1))
+
+            # Rate limiting
+            if i < count - 1:
+                time.sleep(2)
+
+        # Summary
+        print("\n" + "=" * 60)
+        print("📊 Generation Summary")
+        print("=" * 60)
+        print(f"✅ Successfully generated: {len(generated_images)} images")
+        if failed_generations:
+            print(f"❌ Failed for: {', '.join(failed_generations)}")
+
+        self.interaction.current_state["image_order"] = generated_images.copy()
+        self.interaction._save_state()
+
+        return generated_images
+
+    def _build_free_mode_prompt(self, user_prompt: str, photo_count: int) -> str:
+        """
+        Build complete prompt for free mode generation
+
+        Args:
+            user_prompt: User's custom prompt
+            photo_count: Number of reference photos
+
+        Returns:
+            Complete prompt with AI instructions
+        """
+        # Build person identification instructions
+        if photo_count == 1:
+            person_instructions = "Use facial features, gender, age, and appearance from the reference photo."
+        else:
+            person_instructions = " ".join([
+                f"Person {j+1}: Extract facial features, gender, age, and appearance from reference photo #{j+1} only."
+                for j in range(photo_count)
+            ])
+
+        complete_prompt = (
+            f"{user_prompt}\n\n"
+            f"CRITICAL INSTRUCTIONS:\n"
+            f"{person_instructions}\n"
+            f"IMPORTANT: Use ONLY facial features, gender, and appearance from reference photos - ignore all clothing, backgrounds, and original poses from input images.\n"
+            f"High quality, detailed faces, realistic skin texture, 8k resolution, photorealistic, professional photography."
+        )
+
+        return complete_prompt
+
+    def _generate_with_multiple_photos_and_prompts(
+        self, photos: List[str], prompt: str, negative_prompt: str,
+        filename: str, index: int
+    ) -> Optional[str]:
+        """Helper method to generate image with multiple reference photos and custom prompts"""
+
+        # Mock mode handling
+        if self.mock_mode:
+            return self._generate_mock_response(filename)
+
+        # Encode all photos
+        images_base64 = [self._encode_image_to_base64(photo) for photo in photos]
+
+        # Get image size from config
+        gen_config = self.config.config["generation"]
+        width = gen_config.get("image_width", 2048)
+        height = gen_config.get("image_height", 2048)
+        size_str = f"{width}x{height}"
+
+        # Prepare request payload with multiple reference images
+        payload = {
+            "model": gen_config.get("image_model", "doubao-seedream-4-5-251128"),
+            "prompt": prompt,
+            "image": images_base64,  # Array of base64 images
+            "size": size_str,
+            "negative_prompt": negative_prompt if negative_prompt else (
+                "blurry, distorted faces, unnatural pose, bad proportions, "
+                "watermark, text, low quality, artifacts, deformed hands, extra fingers"
+            ),
+            "sequential_image_generation": "disabled",
+            "response_format": "b64_json",
+            "watermark": False,
+        }
+
+        return self._execute_api_request(payload, filename)
