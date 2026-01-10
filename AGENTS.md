@@ -47,7 +47,7 @@ export MOCK_API="true"
 
 ### File Structure
 - Entry point: `scripts/main.py` (CLI with argparse subcommands)
-- Core modules: `scripts/config.py`, `scripts/interaction.py`, `scripts/image_generator.py`
+- Core modules: `scripts/config.py`, `scripts/interaction.py`, `scripts/image_generator.py`, `scripts/scenario_handlers.py`
 - Data files: `data/*.json` (scenarios, styles, poses, templates, characters)
 - Output: `output/images/`, `temp/`, `logs/` (auto-generated)
 

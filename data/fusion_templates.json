@@ -1,0 +1,111 @@
+{
+  "templates": [
+    {
+      "id": "outfit-fusion",
+      "name": "穿搭融合",
+      "category": "融合",
+      "description": "将人物照片与服装图片融合，生成自然穿搭图",
+      "required_photos": 2,
+      "max_photos": 2,
+      "prompt_structure": "将人物照片与服装图片融合，生成自然穿搭图。\n人物：从第一张参考图提取面部特征、性别、年龄和体态。\n服装：从第二张参考图提取服装款式、颜色和材质。\n风格：{style}。\nIMPORTANT: 服装要自然贴合人物身体，光影要协调一致。\n不要保留原图的背景和姿势，生成全新的穿搭效果。\nHigh quality, detailed, realistic, seamless composition.",
+      "fields": [
+        {
+          "name": "style",
+          "label": "穿搭风格",
+          "type": "select",
+          "options": ["时尚街拍", "商务休闲", "运动休闲", "文艺清新", "复古风", "韩系风"],
+          "default": "时尚街拍"
+        }
+      ]
+    },
+    {
+      "id": "person-scenery-fusion",
+      "name": "人景融合",
+      "category": "融合",
+      "description": "将人物与风景融合，生成自然场景照",
+      "required_photos": 2,
+      "max_photos": 2,
+      "prompt_structure": "将人物照片与风景照片融合。\n人物：从第一张参考图提取面部特征、性别、年龄和体态。\n风景：从第二张参考图提取场景、色调、氛围和构图。\n情绪：{mood}。\n{composition}\nIMPORTANT: 人物与风景的光影要自然融合，色调要协调。\n人物在风景中的位置要合理，比例要恰当。\nHigh quality, detailed, realistic, seamless composition.",
+      "fields": [
+        {
+          "name": "mood",
+          "label": "情绪氛围",
+          "type": "select",
+          "options": ["宁静致远", "活力四射", "浪漫温馨", "神秘奇幻", "怀旧温暖"],
+          "default": "宁静致远"
+        },
+        {
+          "name": "composition",
+          "label": "构图建议（可选）",
+          "type": "text",
+          "placeholder": "人物位于画面左侧三分之一处，作为前景...",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "brand-design",
+      "name": "品牌视觉设计",
+      "category": "融合",
+      "description": "基于LOGO设计全套品牌视觉",
+      "required_photos": 1,
+      "max_photos": 1,
+      "prompt_structure": "参考LOGO，设计一套品牌视觉。\n品牌名称：{brand_name}。\n视觉主色调：{color}。\n设计风格：{style}。\n需要设计的物品：{items}。\nIMPORTANT: 所有物品要保持统一的品牌风格，视觉识别度高。\n设计要符合{style}的美学标准。\nHigh quality, professional brand design, consistent visual identity.",
+      "fields": [
+        {
+          "name": "brand_name",
+          "label": "品牌名称",
+          "type": "text",
+          "placeholder": "品牌中文名或英文名",
+          "required": true
+        },
+        {
+          "name": "color",
+          "label": "主色调",
+          "type": "select",
+          "options": ["红色", "蓝色", "绿色", "黄色", "橙色", "紫色", "黑色", "白色"],
+          "default": "绿色"
+        },
+        {
+          "name": "style",
+          "label": "设计风格",
+          "type": "select",
+          "options": ["简约现代", "趣味可爱", "商务专业", "科技未来", "复古经典", "自然清新"],
+          "default": "简约现代"
+        },
+        {
+          "name": "items",
+          "label": "需要设计的物品",
+          "type": "multiselect",
+          "options": ["包装袋", "帽子", "卡片", "挂绳", "T恤", "杯子", "笔记本", "海报"],
+          "default": "包装袋,帽子,卡片,挂绳"
+        }
+      ]
+    },
+    {
+      "id": "multi-person-composite",
+      "name": "多人合成",
+      "category": "融合",
+      "description": "将多个人物照片合成为一张合影",
+      "required_photos": 2,
+      "max_photos": 6,
+      "prompt_structure": "将{photo_count}个人物照片合成为一张合影。\n{person_instructions}\n场景：{scene}。\n氛围：{atmosphere}。\nIMPORTANT: 每个人物要从对应的参考图提取面部特征、性别、年龄和体态。\n所有人物的光影要协调一致，色调要统一。\n人物之间的位置和姿态要自然合理。\nHigh quality, detailed faces, realistic skin texture, 8k resolution, photorealistic.",
+      "fields": [
+        {
+          "name": "scene",
+          "label": "场景描述",
+          "type": "text",
+          "placeholder": "户外公园、室内客厅、海滩...",
+          "required": true
+        },
+        {
+          "name": "atmosphere",
+          "label": "氛围",
+          "type": "select",
+          "options": ["温馨轻松", "正式商务", "活力四射", "浪漫温馨"],
+          "default": "温馨轻松"
+        }
+      ]
+    }
+  ]
+}

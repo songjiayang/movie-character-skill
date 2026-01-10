@@ -10,6 +10,7 @@
   },
   "generation": {
     "default_image_count": 1,
+    "max_image_count": 10,
     "image_width": 1440,
     "image_height": 2560,
     "image_model": "doubao-seedream-4-5-251128"
