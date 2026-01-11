@@ -653,6 +653,31 @@ class ImageGenerator:
 
         return self._execute_api_request(payload, filename)
 
+    def _generate_without_photo(self, prompt: str, filename: str) -> Optional[str]:
+        """Helper method to generate image without reference photo"""
+        if self.mock_mode:
+            return self._generate_mock_response(filename)
+
+        gen_config = self.config.config["generation"]
+        width = gen_config.get("image_width", 2048)
+        height = gen_config.get("image_height", 2048)
+        size_str = f"{width}x{height}"
+
+        payload = {
+            "model": gen_config.get("image_model", "doubao-seedream-4-5-251128"),
+            "prompt": prompt,
+            "size": size_str,
+            "negative_prompt": (
+                "blurry, distorted faces, unnatural pose, bad proportions, "
+                "watermark, text, low quality, artifacts, deformed hands, extra fingers"
+            ),
+            "sequential_image_generation": "disabled",
+            "response_format": "b64_json",
+            "watermark": False
+        }
+
+        return self._execute_api_request(payload, filename)
+
     def _execute_api_request(self, payload: Dict, filename: str) -> Optional[str]:
         """Execute API request and handle response"""
         if not self.api_key:
@@ -984,7 +1009,309 @@ class ImageGenerator:
             ),
             "sequential_image_generation": "disabled",
             "response_format": "b64_json",
-            "watermark": False,
+            "watermark": False
         }
 
         return self._execute_api_request(payload, filename)
+
+    def generate_edit_images(self, photo: str, template: Dict, field_values: Dict) -> List[str]:
+        """
+        Generate edited images
+
+        Args:
+            photo: Path to reference photo
+            template: Template dictionary with prompt structure
+            field_values: Dictionary of field values from user input
+
+        Returns:
+            List of generated image paths
+        """
+        print("\n" + "=" * 60)
+        print("✏️  Image Edit Generation Started")
+        print("=" * 60)
+
+        processed_photo = self.preprocess_user_photo(photo)
+
+        prompt_structure = template.get("prompt_structure", "")
+        field_values_with_default = {"原照片的": "参考"}
+        field_values_with_default.update(field_values)
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        print(f"  Template: {template['name']}")
+        print(f"  Prompt preview: {full_prompt[:100]}...")
+
+        image_path = self._generate_with_single_photo(
+            processed_photo,
+            full_prompt,
+            f"edit_{template['id']}_{int(time.time())}",
+            0
+        )
+
+        if image_path:
+            generated_images = [image_path]
+            self.interaction.update_state("generated_images", generated_images)
+
+            print("\n" + "=" * 60)
+            print("📊 Generation Summary")
+            print("=" * 60)
+            print(f"✅ Successfully generated: {len(generated_images)} image(s)")
+
+            self.interaction.current_state["image_order"] = generated_images.copy()
+            self.interaction._save_state()
+
+            return generated_images
+        else:
+            print("\n❌ Edit failed")
+            return []
+
+    def generate_fusion_images(self, photos: List[str], template: Dict, field_values: Dict) -> List[str]:
+        """
+        Generate fused images from multiple reference photos
+
+        Args:
+            photos: List of reference photo paths
+            template: Template dictionary with prompt structure
+            field_values: Dictionary of field values from user input
+
+        Returns:
+            List of generated image paths
+        """
+        print("\n" + "=" * 60)
+        print("🔀 Fusion Generation Started")
+        print("=" * 60)
+
+        processed_photos = []
+        for i, photo in enumerate(photos):
+            processed_photo = self.preprocess_user_photo_with_index(photo, i)
+            processed_photos.append(processed_photo)
+
+        prompt_structure = template.get("prompt_structure", "")
+        photo_count = len(photos)
+        person_instructions = " ".join([
+            f"Person {j+1}: Extract facial features, gender, age, and appearance from reference photo #{j+1} only."
+            for j in range(photo_count)
+        ])
+        field_values_with_default = {
+            "photo_count": photo_count,
+            "person_instructions": person_instructions
+        }
+        field_values_with_default.update(field_values)
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        print(f"  Template: {template['name']}")
+        print(f"  Reference photos: {photo_count}")
+        print(f"  Prompt preview: {full_prompt[:100]}...")
+
+        image_path = self._generate_with_multiple_photos(
+            processed_photos,
+            full_prompt,
+            f"fusion_{template['id']}_{int(time.time())}",
+            0
+        )
+
+        if image_path:
+            generated_images = [image_path]
+            self.interaction.update_state("generated_images", generated_images)
+
+            print("\n" + "=" * 60)
+            print("📊 Generation Summary")
+            print("=" * 60)
+            print(f"✅ Successfully generated: {len(generated_images)} image(s)")
+
+            self.interaction.current_state["image_order"] = generated_images.copy()
+            self.interaction._save_state()
+
+            return generated_images
+        else:
+            print("\n❌ Fusion failed")
+            return []
+
+    def generate_series_images(self, photo: str, template: Dict, field_values: Dict) -> List[str]:
+        """
+        Generate series of images
+
+        Args:
+            photo: Path to reference photo
+            template: Template dictionary with prompt structure
+            field_values: Dictionary of field values from user input
+
+        Returns:
+            List of generated image paths
+        """
+        print("\n" + "=" * 60)
+        print("🖼️  Series Generation Started")
+        print("=" * 60)
+
+        processed_photo = self.preprocess_user_photo(photo)
+
+        prompt_structure = template.get("prompt_structure", "")
+        field_values_with_default = {"原照片的": "参考"}
+        field_values_with_default.update(field_values)
+
+        template_id = template.get('id', '')
+        if template_id == 'seasons':
+            count = field_values.get('count', 4)
+            scene_instructions = f"场景统一为：{field_values.get('scene', '户外庭院')}。"
+
+            seasonal_descriptions = "\n各季节描述：\n"
+            seasons = [
+                ("春天", "嫩绿新叶，粉红花朵，柔和晨光，生机勃勃"),
+                ("夏天", "翠绿浓荫，金色阳光，强烈日光，热情洋溢"),
+                ("秋天", "橙红落叶，金黄果实，温暖黄昏，丰收喜悦"),
+                ("冬天", "银白雪地，深蓝天空，冷清冬阳，静谧纯净")
+            ]
+            for i, (season, desc) in enumerate(seasons[:count]):
+                seasonal_descriptions += f"图片{i+1}：{season} - {desc}。\n"
+
+            field_values_with_default['count'] = count
+            field_values_with_default['scene_instructions'] = scene_instructions
+            field_values_with_default['seasonal_descriptions'] = seasonal_descriptions
+
+        elif template_id == 'character-states':
+            count = field_values.get('count', 4)
+            state_type = field_values.get('state_type', '动作状态')
+            custom_states = field_values.get('custom_states', '')
+
+            state_descriptions = "\n各状态描述：\n"
+            if custom_states:
+                states = custom_states.split('、')
+                for i, state in enumerate(states[:count]):
+                    state_descriptions += f"图片{i+1}：{state.strip()}。\n"
+            else:
+                default_states = {
+                    "动作状态": ["奔跑", "跳跃", "静止", "转身"],
+                    "表情状态": ["开心", "惊讶", "思考", "平静"],
+                    "服装变化": ["日常装", "运动装", "正式装", "休闲装"],
+                    "道具互动": ["手持相机", "抱着玩偶", "拿着书本", "背着背包"]
+                }
+                states = default_states.get(state_type, default_states["动作状态"])
+                for i, state in enumerate(states[:count]):
+                    state_descriptions += f"图片{i+1}：{state}。\n"
+
+            field_values_with_default['count'] = count
+            field_values_with_default['state_descriptions'] = state_descriptions
+
+        elif template_id == 'story-sequence':
+            count = field_values.get('count', 6)
+            theme = field_values.get('theme', '奇幻冒险')
+
+            story_outline = f"故事大纲：{theme}。"
+
+            scene_descriptions = "\n场景描述：\n"
+            scene_stages = [
+                "故事开端，介绍主角和初始环境",
+                "发展情节，主角面临挑战或机会",
+                "情节升级，主角采取行动或做出选择",
+                "高潮时刻，关键冲突或转折点",
+                "解决阶段，主角克服困难或达成目标",
+                "结局，展示结果和成长"
+            ]
+            for i in range(min(count, len(scene_stages))):
+                scene_descriptions += f"图片{i+1}：{scene_stages[i]}。\n"
+
+            field_values_with_default['count'] = count
+            field_values_with_default['story_outline'] = story_outline
+            field_values_with_default['scene_descriptions'] = scene_descriptions
+
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        print(f"  Template: {template['name']}")
+        print(f"  Image count: {field_values.get('count', 1)}")
+        print(f"  Prompt preview: {full_prompt[:150]}...")
+
+        image_path = self._generate_with_single_photo(
+            processed_photo,
+            full_prompt,
+            f"series_{template['id']}_{int(time.time())}",
+            0
+        )
+
+        if image_path:
+            generated_images = [image_path]
+            self.interaction.update_state("generated_images", generated_images)
+
+            print("\n" + "=" * 60)
+            print("📊 Generation Summary")
+            print("=" * 60)
+            print(f"✅ Successfully generated: {len(generated_images)} image(s)")
+
+            self.interaction.current_state["image_order"] = generated_images.copy()
+            self.interaction._save_state()
+
+            return generated_images
+        else:
+            print("\n❌ Series generation failed")
+            return []
+
+    def generate_poster_images(self, photo: Optional[str], template: Dict, field_values: Dict) -> List[str]:
+        """
+        Generate poster images
+
+        Args:
+            photo: Path to reference photo (optional)
+            template: Template dictionary with prompt structure
+            field_values: Dictionary of field values from user input
+
+        Returns:
+            List of generated image paths
+        """
+        print("\n" + "=" * 60)
+        print("📄 Poster Generation Started")
+        print("=" * 60)
+
+        prompt_structure = template.get("prompt_structure", "")
+        field_values_with_default = {"原照片的": "参考"}
+
+        # Get all template fields and set defaults for missing ones
+        template_fields = template.get('fields', [])
+        for field in template_fields:
+            field_name = field['name']
+            if field_name not in field_values:
+                field_values_with_default[field_name] = field.get('default', '')
+            else:
+                field_values_with_default[field_name] = field_values[field_name]
+
+        # Add content preservation instruction when photo is provided
+        if photo:
+            field_values_with_default["keep_content_instruction"] = (
+                "保持原图的核心内容不变，包括人物、商品、角色等主要目标特征，只改变海报的整体风格、布局和设计。"
+            )
+        else:
+            field_values_with_default["keep_content_instruction"] = ""
+
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        print(f"  Template: {template['name']}")
+        print(f"  Reference photo: {'Yes' if photo else 'No (text-only generation)'}")
+        print(f"  Prompt preview: {full_prompt[:150]}...")
+
+        if photo:
+            processed_photo = self.preprocess_user_photo(photo)
+            image_path = self._generate_with_single_photo(
+                processed_photo,
+                full_prompt,
+                f"poster_{template['id']}_{int(time.time())}",
+                0
+            )
+        else:
+            image_path = self._generate_without_photo(
+                full_prompt,
+                f"poster_{template['id']}_{int(time.time())}"
+            )
+
+        if image_path:
+            generated_images = [image_path]
+            self.interaction.update_state("generated_images", generated_images)
+
+            print("\n" + "=" * 60)
+            print("📊 Generation Summary")
+            print("=" * 60)
+            print(f"✅ Successfully generated: {len(generated_images)} image(s)")
+
+            self.interaction.current_state["image_order"] = generated_images.copy()
+            self.interaction._save_state()
+
+            return generated_images
+        else:
+            print("\n❌ Poster generation failed")
+            return []

@@ -14,14 +14,14 @@ DEFAULT_LOGS_DIR = "logs"
 
 
 class Config:
-    """Configuration manager for the skill
+    """Configuration manager for skill
 
     This class manages configuration with portable relative paths.
     Paths in config.json can be either:
     - Relative paths (recommended): "temp", "output", "logs"
     - Absolute paths: "/full/path/to/directory"
 
-    The class resolves paths relative to the skill directory.
+    The class resolves paths relative to skill directory.
     """
 
     def __init__(self, skill_dir=None):
@@ -29,7 +29,7 @@ class Config:
         Initialize configuration manager.
 
         Args:
-            skill_dir: Path to the skill directory. If None, auto-detected from script location.
+            skill_dir: Path to skill directory. If None, auto-detected from script location.
         """
         self.skill_dir = Path(skill_dir) if skill_dir else Path(__file__).resolve().parent.parent
         self.config_file = self.skill_dir / "config.json"
@@ -72,17 +72,17 @@ class Config:
         return (self.skill_dir / path).resolve()
 
     def get_temp_dir(self):
-        """Get the absolute path to temp directory"""
+        """Get absolute path to temp directory"""
         path_value = self.config.get("paths", {}).get("temp_dir", DEFAULT_TEMP_DIR)
         return self._resolve_path(path_value)
 
     def get_output_dir(self):
-        """Get the absolute path to output directory"""
+        """Get absolute path to output directory"""
         path_value = self.config.get("paths", {}).get("output_dir", DEFAULT_OUTPUT_DIR)
         return self._resolve_path(path_value)
 
     def get_logs_dir(self):
-        """Get the absolute path to logs directory"""
+        """Get absolute path to logs directory"""
         path_value = self.config.get("paths", {}).get("logs_dir", DEFAULT_LOGS_DIR)
         return self._resolve_path(path_value)
 
@@ -93,12 +93,12 @@ class Config:
 
     @property
     def image_dir(self):
-        """Get the absolute path to images output directory"""
+        """Get absolute path to images output directory"""
         return self.get_output_dir() / "images"
 
     @property
     def video_dir(self):
-        """Get the absolute path to video output directory (for future use)"""
+        """Get absolute path to video output directory (for future use)"""
         return self.get_output_dir() / "videos"
 
     def _load_config(self):
@@ -118,37 +118,23 @@ class Config:
                         "logs_dir": DEFAULT_LOGS_DIR
                     }
                 if "generation" not in config:
-                    config["generation"] = {
-                        "default_image_count": 5,
-                        "image_width": 1024,
-                        "image_height": 1024,
-                        "image_model": "doubao-seedream-4.5"
-                    }
+                    config["generation"] = self._get_default_generation_config()
 
                 # Save updated config if fields were added
                 self._save_config(config)
                 return config
-
             except json.JSONDecodeError:
                 print(f"Warning: Config file {self.config_file} is corrupted. Using defaults.")
 
         # Default configuration with RELATIVE paths (portable)
         default_config = {
-            "api": {
-                "image_generation_url": "https://ark.cn-beijing.volces.com/api/v3/images/generations"
-            },
+            "api": self._get_default_api_config(),
             "paths": {
-                # Use RELATIVE paths for portability
                 "temp_dir": DEFAULT_TEMP_DIR,
                 "output_dir": DEFAULT_OUTPUT_DIR,
                 "logs_dir": DEFAULT_LOGS_DIR
             },
-            "generation": {
-                "default_image_count": 5,
-                "image_width": 1024,
-                "image_height": 1024,
-                "image_model": "doubao-seedream-4.5"
-            },
+            "generation": self._get_default_generation_config(),
             "characters": []
         }
 
@@ -156,108 +142,33 @@ class Config:
         self._save_config(default_config)
         return default_config
 
+    def _get_default_api_config(self) -> dict:
+        """Get default API configuration"""
+        return {
+            "image_generation_url": "https://ark.cn-beijing.volces.com/api/v3/images/generations"
+        }
+
+    def _get_default_generation_config(self) -> dict:
+        """Get default generation configuration"""
+        return {
+            "default_image_count": 1,
+            "max_image_count": 10,
+            "image_width": 1440,
+            "image_height": 2560,
+            "image_model": "doubao-seedream-4-5-251128"
+        }
+
     def _load_default_characters(self):
-        """Load default movie characters"""
-        default_chars = [
-            {
-                "name": "Iron Man",
-                "prompt": "Tony Stark as Iron Man in character on Avengers film set, taking break from shooting, high-tech suit",
-                "scene": "movie film set with crew members, cameras, lighting equipment, behind-the-scenes atmosphere"
-            },
-            {
-                "name": "Wonder Woman",
-                "prompt": "Diana Prince as Wonder Woman on Justice League film set, between takes, golden armor",
-                "scene": "epic film set with director's chairs, camera cranes, production crew working"
-            },
-            {
-                "name": "Spider-Man",
-                "prompt": "Peter Parker as Spider-Man on Marvel film set, friendly neighborhood hero pose",
-                "scene": "urban film set with green screens, stunt coordinators, special effects equipment"
-            },
-            {
-                "name": "Harry Potter",
-                "prompt": "Harry Potter on Hogwarts film set, holding wand, magical atmosphere between scenes",
-                "scene": "fantasy film set with magical props, special effects team, cinematic lighting"
-            },
-            {
-                "name": "Neo (Matrix)",
-                "prompt": "Neo from The Matrix on film set, wearing sunglasses and black coat, between bullet time shots",
-                "scene": "futuristic film set with green code rain screens, wire rigging, special effects"
-            },
-            {
-                "name": "Star-Lord (Guardians of the Galaxy)",
-                "prompt": "Peter Quill as Star-Lord on Guardians of the Galaxy film set, wearing leather jacket and helmet, holding blasters",
-                "scene": "space film set with alien props, starship models, cosmic background visuals"
-            },
-            {
-                "name": "Gamora (Guardians of the Galaxy)",
-                "prompt": "Gamora on Guardians of the Galaxy film set, green-skinned assassin, holding sword, fierce expression",
-                "scene": "alien planet film set with exotic flora, spaceship wreckage, otherworldly lighting"
-            },
-            {
-                "name": "Drax the Destroyer (Guardians of the Galaxy)",
-                "prompt": "Drax the Destroyer on Guardians of the Galaxy film set, heavily muscled, covered in tattoos, holding knives",
-                "scene": "prison ship film set with metal corridors, alien prisoners, sci-fi security systems"
-            },
-            {
-                "name": "Rocket Raccoon (Guardians of the Galaxy)",
-                "prompt": "Rocket Raccoon on Guardians of the Galaxy film set, genetically engineered raccoon, holding oversized gun, annoyed expression",
-                "scene": "spaceship cockpit film set with control panels, navigation screens, futuristic technology"
-            },
-            {
-                "name": "Groot (Guardians of the Galaxy)",
-                "prompt": "Groot on Guardians of the Galaxy film set, sentient tree-like creature, peaceful expression, wooden texture",
-                "scene": "alien forest film set with bioluminescent plants, floating rocks, mystical atmosphere"
-            },
-            {
-                "name": "Captain America",
-                "prompt": "Steve Rogers as Captain America on Avengers film set, holding iconic shield, patriotic suit",
-                "scene": "WWII-era film set with period costumes, military vehicles, historical props"
-            },
-            {
-                "name": "Thor",
-                "prompt": "Thor on Marvel film set, holding Mjolnir hammer, flowing red cape, Asgardian armor",
-                "scene": "Asgardian palace film set with golden architecture, mystical runes, divine lighting"
-            },
-            {
-                "name": "Black Widow",
-                "prompt": "Natasha Romanoff as Black Widow on Avengers film set, black tactical suit, martial arts pose",
-                "scene": "spy headquarters film set with high-tech computers, weapon displays, surveillance monitors"
-            },
-            {
-                "name": "Hulk",
-                "prompt": "Bruce Banner as Hulk on Avengers film set, massive green creature, roaring expression, torn purple pants",
-                "scene": "laboratory film set with broken equipment, scientific instruments, emergency lighting"
-            },
-            {
-                "name": "Black Panther",
-                "prompt": "T'Challa as Black Panther on Marvel film set, vibranium suit, cat-like helmet, regal pose",
-                "scene": "Wakandan throne room film set with African-inspired decor, advanced technology, tribal patterns"
-            },
-            {
-                "name": "Doctor Strange",
-                "prompt": "Stephen Strange as Doctor Strange on Marvel film set, Cloak of Levitation, magical gestures, mystical aura",
-                "scene": "Sanctum Sanctorum film set with ancient artifacts, floating books, magical portals"
-            },
-            {
-                "name": "Captain Marvel",
-                "prompt": "Carol Danvers as Captain Marvel on Marvel film set, glowing with cosmic energy, flight pose, Kree suit",
-                "scene": "space station film set with starfield views, alien technology, zero-gravity effects"
-            },
-            {
-                "name": "Thanos",
-                "prompt": "Thanos on Avengers film set, purple-skinned titan, wearing golden armor, Infinity Gauntlet on hand",
-                "scene": "Titan planet film set with alien ruins, desolate landscape, cosmic destruction"
-            }
-        ]
+        """Load default movie characters from data file"""
+        if self.default_characters_file.exists():
+            try:
+                with open(self.default_characters_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
 
-        # Save default characters if file doesn't exist
-        if not self.default_characters_file.exists():
-            self.default_characters_file.parent.mkdir(exist_ok=True)
-            with open(self.default_characters_file, 'w', encoding='utf-8') as f:
-                json.dump(default_chars, f, indent=2, ensure_ascii=False)
-
-        return default_chars
+        # Return empty list if file doesn't exist or is invalid
+        return []
 
     def get_all_scenarios(self):
         """Get all available scenarios from scenarios.json"""
@@ -351,30 +262,6 @@ class Config:
         except (json.JSONDecodeError, IOError):
             return None
 
-    def get_global_settings(self):
-        """Get global settings from scenarios config"""
-        scenarios_config_file = self.skill_dir / "data" / self.config.get("scenarios", {}).get("config_file", "scenarios.json")
-
-        if not scenarios_config_file.exists():
-            return {
-                "default_image_count": 5,
-                "max_image_count": 10,
-                "default_width": 2048,
-                "default_height": 2048
-            }
-
-        try:
-            with open(scenarios_config_file, 'r', encoding='utf-8') as f:
-                config_data = json.load(f)
-                return config_data.get("global_settings", {})
-        except (json.JSONDecodeError, IOError):
-            return {
-                "default_image_count": 5,
-                "max_image_count": 10,
-                "default_width": 2048,
-                "default_height": 2048
-            }
-
     def _save_config(self, config=None):
         """Save configuration to file"""
         config = config or self.config
@@ -387,7 +274,6 @@ class Config:
         Retrieves API key for image generation service
         """
         return os.getenv("ARK_API_KEY")
-
 
     def add_character(self, name, prompt, scene=None):
         """Add a custom character"""
@@ -415,6 +301,7 @@ class Config:
             self._save_config()
             return True
         return False
+
 
 # Global configuration instance
 config = Config()

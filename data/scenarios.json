@@ -77,6 +77,50 @@
       ]
     },
     {
+      "id": "edit",
+      "name": "图像编辑",
+      "description": "换衣服、换材质、换背景、换风格等专业图像编辑",
+      "input_type": "single_photo",
+      "required_photos": 1,
+      "max_photos": 1,
+      "data_file": "edit_templates.json",
+      "prompt_templates": [],
+      "custom_prompt": false
+    },
+    {
+      "id": "fusion",
+      "name": "多图融合",
+      "description": "穿搭融合、人景融合、品牌设计、多人合成",
+      "input_type": "multiple_photos",
+      "required_photos": 1,
+      "max_photos": 6,
+      "data_file": "fusion_templates.json",
+      "prompt_templates": [],
+      "custom_prompt": false
+    },
+    {
+      "id": "series",
+      "name": "组图创作",
+      "description": "四季主题、品牌视觉、角色变体、故事序列",
+      "input_type": "single_photo",
+      "required_photos": 1,
+      "max_photos": 1,
+      "data_file": "series_templates.json",
+      "prompt_templates": [],
+      "custom_prompt": false
+    },
+    {
+      "id": "poster",
+      "name": "海报设计",
+      "description": "电影海报、活动海报、产品海报",
+      "input_type": "single_photo",
+      "required_photos": 1,
+      "max_photos": 1,
+      "data_file": "poster_templates.json",
+      "prompt_templates": [],
+      "custom_prompt": false
+    },
+    {
       "id": "free",
       "name": "自由模式",
       "description": "自定义prompt生成，支持1-14张参考图片",
@@ -87,22 +131,5 @@
       "prompt_templates": [],
       "custom_prompt": true
     }
-  ],
-  "global_settings": {
-    "default_image_count": 1,
-    "max_image_count": 10,
-    "default_width": 2048,
-    "default_height": 2048,
-    "default_model": "doubao-seedream-4-5-251128",
-    "supported_sizes": [
-      "1024x1024",
-      "2048x2048",
-      "2304x1728",
-      "1728x2304",
-      "2560x1440",
-      "1440x2560",
-      "2496x1664",
-      "1664x2496"
-    ]
-  }
+  ]
 }

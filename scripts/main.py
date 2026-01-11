@@ -15,6 +15,17 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import config
 from interaction import InteractionManager
 from image_generator import ImageGenerator
+from scenario_handlers import (
+    handle_portrait_scenario,
+    handle_couple_scenario,
+    handle_family_scenario,
+    handle_free_scenario,
+    handle_edit_scenario,
+    handle_fusion_scenario,
+    handle_series_scenario,
+    handle_poster_scenario,
+    handle_celebrity_scenario
+)
 
 def check_api_keys():
     """Check if required API credentials are configured"""
@@ -47,10 +58,10 @@ Examples:
     generate_parser = subparsers.add_parser("generate", help="Start the generation process")
     generate_parser.add_argument("--photo", "-p", help="Path to user photo (for single photo scenarios)")
     generate_parser.add_argument("--photos", help="Comma-separated photo paths (for multi-photo scenarios)")
-    generate_parser.add_argument("--scenario", "-s", help="Scenario type (celebrity, portrait, couple, family, free)")
+    generate_parser.add_argument("--scenario", "-s", help="Scenario type (celebrity, portrait, couple, family, free, edit, fusion, series, poster)")
     generate_parser.add_argument("--style", help="Style name (for portrait scenario)")
     generate_parser.add_argument("--pose", help="Pose name (for couple scenario)")
-    generate_parser.add_argument("--template", help="Template name (for family scenario)")
+    generate_parser.add_argument("--template", "-t", help="Template name (for family, edit, fusion, series, and poster scenarios)")
     generate_parser.add_argument("--background", help="Background name (for couple/family scenarios)")
     generate_parser.add_argument("--prompt", help="Custom prompt (for free mode scenario)")
     generate_parser.add_argument("--negative-prompt", help="Negative prompt (optional, for free mode)")
@@ -117,276 +128,28 @@ def command_generate(args):
         scenario_id = getattr(args, 'scenario', 'celebrity')
         generated_images = []
 
-        # Handle different scenarios
+        # Handle different scenarios using extracted handlers
         if scenario_id == 'portrait':
-            # Portrait scenario - validate photo first
-            photo_path = args.photo
-            if not photo_path or not Path(photo_path).exists():
-                print(f"❌ Photo not found: {photo_path}")
-                return 1
-
-            # Portrait scenario - generate portrait photos with styles
-            style_name = getattr(args, 'style', None)
-            if not style_name:
-                print("❌ Style is required for portrait scenario. Use --style parameter.")
-                print("Available styles:")
-                styles = config.get_scenario_data('portrait')
-                if styles:
-                    for s in styles[:5]:
-                        print(f"  - {s['name']}")
-                return 1
-
-            # Find the style
-            styles = config.get_scenario_data('portrait')
-            if not styles:
-                print("❌ Failed to load portrait styles.")
-                return 1
-
-            selected_style = None
-            for style in styles:
-                if style['name'] == style_name or style.get('id') == style_name:
-                    selected_style = style
-                    break
-
-            if not selected_style:
-                print(f"❌ Style '{style_name}' not found.")
-                return 1
-
-            # Get count (default to 1 for portrait)
-            count = getattr(args, 'count', 1)
-
-            # Generate portrait images
-            result = image_gen.generate_portrait_images(
-                photo_path,
-                [selected_style],
-                count
-            )
-            generated_images = result if result else []
-
+            success, generated_images = handle_portrait_scenario(args, config, image_gen)
         elif scenario_id == 'couple':
-            # Couple scenario
-            photos_arg = getattr(args, 'photos', None)
-            if not photos_arg:
-                print("❌ --photos parameter is required for couple scenario.")
-                return 1
-
-            photo_paths = [p.strip() for p in photos_arg.split(',')]
-            if len(photo_paths) < 2:
-                print("❌ At least 2 photos required for couple scenario.")
-                return 1
-
-            # Validate all photos exist
-            for p in photo_paths:
-                if not Path(p).exists():
-                    print(f"❌ Photo not found: {p}")
-                    return 1
-
-            count = getattr(args, 'count', 1)
-
-            # Get couple pose (default to first one)
-            couple_poses = config.get_scenario_data('couple')
-            if not couple_poses:
-                print("❌ Failed to load couple poses.")
-                return 1
-
-            # Filter by specified pose if provided
-            pose_name = getattr(args, 'pose', None)
-            if pose_name:
-                selected_pose = None
-                for pose in couple_poses:
-                    if pose['name'] == pose_name or pose.get('id') == pose_name:
-                        selected_pose = pose
-                        break
-                if not selected_pose:
-                    print(f"❌ Pose '{pose_name}' not found.")
-                    print("Available poses:")
-                    for p in couple_poses[:5]:
-                        print(f"  - {p['name']}")
-                    return 1
-                couple_type = selected_pose
-            else:
-                couple_type = couple_poses[0]
-
-            # Get background (optional)
-            background = None
-            background_name = getattr(args, 'background', None)
-            if background_name:
-                backgrounds = config.get_backgrounds('couple')
-                if backgrounds:
-                    for bg in backgrounds:
-                        if bg['name'] == background_name or bg.get('id') == background_name:
-                            background = bg
-                            break
-                    if not background:
-                        print(f"❌ Background '{background_name}' not found.")
-                        print("Available backgrounds:")
-                        for b in backgrounds[:5]:
-                            print(f"  - {b['name']}")
-                        return 1
-
-            # Generate couple images
-            result = image_gen.generate_couple_images(
-                photo_paths,
-                couple_type,
-                count,
-                background
-            )
-            generated_images = result if result else []
-
+            success, generated_images = handle_couple_scenario(args, config, image_gen)
         elif scenario_id == 'family':
-            # Family scenario
-            photos_arg = getattr(args, 'photos', None)
-            if not photos_arg:
-                print("❌ --photos parameter is required for family scenario.")
-                return 1
-
-            photo_paths = [p.strip() for p in photos_arg.split(',')]
-            if len(photo_paths) < 1:
-                print("❌ At least 1 photo required for family scenario.")
-                return 1
-
-            # Validate all photos exist
-            for p in photo_paths:
-                if not Path(p).exists():
-                    print(f"❌ Photo not found: {p}")
-                    return 1
-
-            count = getattr(args, 'count', 1)
-
-            # Get family template
-            family_templates = config.get_scenario_data('family')
-            if not family_templates:
-                print("❌ Failed to load family templates.")
-                return 1
-
-            # Filter by specified template if provided
-            template_name = getattr(args, 'template', None)
-            if template_name:
-                selected_template = None
-                for template in family_templates:
-                    if template['name'] == template_name or template.get('id') == template_name:
-                        selected_template = template
-                        break
-                if not selected_template:
-                    print(f"❌ Template '{template_name}' not found.")
-                    print("Available templates:")
-                    for t in family_templates[:5]:
-                        print(f"  - {t['name']}")
-                    return 1
-                family_template = selected_template
-            else:
-                family_template = family_templates[0]
-
-            # Get background (optional)
-            background = None
-            background_name = getattr(args, 'background', None)
-            if background_name:
-                backgrounds = config.get_backgrounds('family')
-                if backgrounds:
-                    for bg in backgrounds:
-                        if bg['name'] == background_name or bg.get('id') == background_name:
-                            background = bg
-                            break
-                    if not background:
-                        print(f"❌ Background '{background_name}' not found.")
-                        print("Available backgrounds:")
-                        for b in backgrounds[:5]:
-                            print(f"  - {b['name']}")
-                        return 1
-
-            # Generate family images
-            result = image_gen.generate_family_images(
-                photo_paths,
-                len(photo_paths),
-                count,
-                family_template,
-                background
-            )
-            generated_images = result if result else []
-
+            success, generated_images = handle_family_scenario(args, config, image_gen)
         elif scenario_id == 'free':
-            # Free mode scenario - custom prompt with 1-14 photos
-            photos_arg = getattr(args, 'photos', None)
-
-            # Support both --photos and --photo for free mode
-            if photos_arg:
-                photo_paths = [p.strip() for p in photos_arg.split(',')]
-            elif hasattr(args, 'photo') and args.photo:
-                photo_paths = [args.photo]
-            else:
-                print("❌ --photos or --photo parameter is required for free mode.")
-                return 1
-
-            # Validate all photos exist
-            for p in photo_paths:
-                if not Path(p).exists():
-                    print(f"❌ Photo not found: {p}")
-                    return 1
-
-            # Validate photo count
-            if len(photo_paths) > 14:
-                print(f"⚠️ Maximum 14 photos allowed, using first 14")
-                photo_paths = photo_paths[:14]
-
-            # Get custom prompt
-            custom_prompt = getattr(args, 'prompt', None)
-            if not custom_prompt:
-                print("❌ --prompt parameter is required for free mode.")
-                return 1
-
-            # Get count
-            count = getattr(args, 'count', 1)
-
-            # Get negative prompt (optional)
-            negative_prompt = getattr(args, 'negative_prompt', "")
-
-            # Generate free mode images
-            result = image_gen.generate_free_mode_images(
-                photo_paths,
-                custom_prompt,
-                count,
-                negative_prompt
-            )
-            generated_images = result if result else []
-
+            success, generated_images = handle_free_scenario(args, config, image_gen)
+        elif scenario_id == 'edit':
+            success, generated_images = handle_edit_scenario(args, config, image_gen)
+        elif scenario_id == 'fusion':
+            success, generated_images = handle_fusion_scenario(args, config, image_gen)
+        elif scenario_id == 'series':
+            success, generated_images = handle_series_scenario(args, config, image_gen)
+        elif scenario_id == 'poster':
+            success, generated_images = handle_poster_scenario(args, config, image_gen)
         else:
-            # Celebrity scenario (default) - validate photo first
-            photo_path = args.photo
-            if not photo_path or not Path(photo_path).exists():
-                print(f"❌ Photo not found: {photo_path}")
-                return 1
+            success, generated_images = handle_celebrity_scenario(args, config, image_gen)
 
-            # Get characters
-            all_chars = config.get_characters()
-
-            # Filter by specified characters if provided
-            if hasattr(args, 'characters') and args.characters:
-                selected_chars = []
-                char_names = [c.strip() for c in args.characters.split(',')]
-                for char in all_chars:
-                    if char['name'] in char_names:
-                        selected_chars.append(char)
-                characters_to_generate = selected_chars
-            else:
-                # Use first N characters
-                count = getattr(args, 'count', config.config["generation"]["default_image_count"])
-                characters_to_generate = all_chars[:count]
-
-            # Generate images
-            for i, character in enumerate(characters_to_generate):
-                print(f"\nGenerating image {i+1}/{len(characters_to_generate)}: {character['name']}")
-
-                image_path = image_gen.generate_single_image(
-                    photo_path,
-                    character,
-                    i
-                )
-
-                if image_path:
-                    generated_images.append(image_path)
-                # Rate limiting - wait between requests
-                if i < len(characters_to_generate) - 1:
-                    time.sleep(2)
+        if not success:
+            return 1
 
         # Summary
         print("\n" + "=" * 60)
@@ -453,16 +216,16 @@ def command_generate(args):
 
             selected_chars = []
             if choice == "1":
-                # Use first few
-                count = getattr(args, 'count', config.config["generation"]["default_image_count"])
+                default_count = config.config["generation"]["default_image_count"]
+                count = getattr(args, 'count', default_count)
                 selected_chars = all_chars[:count]
                 print(f"Selected first {len(selected_chars)} characters.")
             elif choice == "2":
                 selected_chars = all_chars
                 print(f"Selected all {len(selected_chars)} characters.")
             elif choice == "3":
-                # AI suggested
-                count = getattr(args, 'count', config.config["generation"]["default_image_count"])
+                default_count = config.config["generation"]["default_image_count"]
+                count = getattr(args, 'count', default_count)
                 selected_chars = all_chars[:count]
                 print(f"AI suggested: {', '.join([c['name'] for c in selected_chars])}")
             elif choice == "4":
@@ -540,11 +303,7 @@ def command_generate(args):
         for i, character in enumerate(selected_chars):
             print(f"\nGenerating image {i+1}/{len(selected_chars)}: {character['name']}")
 
-            image_path = image_gen.generate_single_image(
-                photo_path,
-                character,
-                i
-            )
+            image_path = image_gen.generate_single_image(photo_path, character, i)
 
             if image_path:
                 generated_images.append(image_path)
@@ -594,6 +353,82 @@ def command_generate(args):
         generated_images = result if result else []
 
         # Show generated images
+        if generated_images:
+            interaction.show_generated_images(generated_images)
+
+        return 0
+    elif scenario_id == 'edit':
+        inputs = interaction.collect_edit_inputs(config.get_scenario(scenario_id), inputs={})
+
+        if not inputs:
+            print("❌ Failed to collect edit inputs.")
+            return 1
+
+        result = image_gen.generate_edit_images(
+            inputs["user_photo"],
+            inputs["template"],
+            inputs["field_values"]
+        )
+
+        generated_images = result if result else []
+
+        if generated_images:
+            interaction.show_generated_images(generated_images)
+
+        return 0
+    elif scenario_id == 'fusion':
+        inputs = interaction.collect_fusion_inputs(config.get_scenario(scenario_id), inputs={})
+
+        if not inputs:
+            print("❌ Failed to collect fusion inputs.")
+            return 1
+
+        result = image_gen.generate_fusion_images(
+            inputs["photos"],
+            inputs["template"],
+            inputs["field_values"]
+        )
+
+        generated_images = result if result else []
+
+        if generated_images:
+            interaction.show_generated_images(generated_images)
+
+        return 0
+    elif scenario_id == 'series':
+        inputs = interaction.collect_series_inputs(config.get_scenario(scenario_id), inputs={})
+
+        if not inputs:
+            print("❌ Failed to collect series inputs.")
+            return 1
+
+        result = image_gen.generate_series_images(
+            inputs["user_photo"],
+            inputs["template"],
+            inputs["field_values"]
+        )
+
+        generated_images = result if result else []
+
+        if generated_images:
+            interaction.show_generated_images(generated_images)
+
+        return 0
+    elif scenario_id == 'poster':
+        inputs = interaction.collect_poster_inputs(config.get_scenario(scenario_id), inputs={})
+
+        if not inputs:
+            print("❌ Failed to collect poster inputs.")
+            return 1
+
+        result = image_gen.generate_poster_images(
+            inputs["user_photo"],
+            inputs["template"],
+            inputs["field_values"]
+        )
+
+        generated_images = result if result else []
+
         if generated_images:
             interaction.show_generated_images(generated_images)
 
@@ -870,11 +705,23 @@ def command_cleanup(args):
 def main():
     """Main entry point"""
     parser = setup_argparse()
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
 
     if not args.command:
         parser.print_help()
         return 1
+
+    # Parse unknown arguments as template field values
+    template_fields = {}
+    for i in range(0, len(unknown_args), 2):
+        if i + 1 < len(unknown_args):
+            arg_name = unknown_args[i]
+            if arg_name.startswith('--'):
+                field_name = arg_name[2:].replace('-', '_')
+                template_fields[field_name] = unknown_args[i + 1]
+
+    # Add template_fields to args
+    args.template_fields = template_fields
 
     try:
         if args.command == "generate":

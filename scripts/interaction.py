@@ -166,7 +166,8 @@ class InteractionManager:
         inputs["selected_styles"] = selected_styles
 
         # Get image count
-        inputs["image_count"] = min(len(selected_styles), self.config.get_global_settings().get("max_image_count", 10))
+        max_count = self.config.config["generation"]["max_image_count"]
+        inputs["image_count"] = min(len(selected_styles), max_count)
         if len(selected_styles) > inputs["image_count"]:
             print(f"Note: Will generate first {inputs['image_count']} styles")
 
@@ -686,7 +687,40 @@ class InteractionManager:
             print(f"✓ Selected {len(photo_paths)} photo(s)")
             break
 
-        # Step 2: Collect custom prompt
+            # Step 2: Collect custom prompt
+        print("\n📝 Step 2: Custom Prompt")
+        print("-" * 40)
+        print("Describe the scene, style, atmosphere, and any specific requirements.")
+        print("Examples:")
+        print("  - 'A futuristic cyberpunk portrait with neon lights'")
+        print("  - 'Renaissance oil painting style, dramatic lighting'")
+        print("  - 'A group photo on Mars surface, wearing space suits'")
+        print("  - '1970s vintage photography style, film grain, warm tones'")
+
+        while True:
+            prompt = input("\nEnter your custom prompt (or 'help' for assistance): ").strip()
+
+            # Check for help request
+            if prompt.lower() == 'help':
+                print("\n" + "=" * 60)
+                print("💡 Available Scenarios")
+                print("=" * 60)
+                print("\n1. 图像编辑 - 换衣服、换材质、换背景等")
+                print("2. 多图融合 - 穿搭融合、人景融合、品牌设计等")
+                print("3. 自由模式 - 完全自定义的 prompt 生成")
+                print("4. 个人写真 - 专业个人肖像摄影")
+                print("5. 双人合影 - 情侣或朋友合影")
+                print("6. 全家合影 - 家庭合照（3-6人）")
+                print("7. 明星合影 - 与电影明星拍照留念")
+                continue
+
+            if not prompt:
+                print("❌ Custom prompt is required.")
+                continue
+
+            inputs["prompt"] = prompt
+            print(f"✓ Prompt: {prompt[:80]}...")
+            break
         print("\n📝 Step 2: Custom Prompt")
         print("-" * 40)
         print("Describe the scene, style, atmosphere, and any specific requirements.")
@@ -746,4 +780,525 @@ class InteractionManager:
         self._save_state()
 
         print("\n✅ Free mode input collection complete!")
+        return inputs
+
+    def collect_edit_inputs(self, scenario, inputs):
+        """
+        Collect inputs for edit scenario
+        """
+        print("\n" + "=" * 60)
+        print("✏️  Image Editor")
+        print("=" * 60)
+
+        inputs = {}
+
+        photos = self.collect_photos_for_scenario(scenario)
+        inputs["user_photo"] = photos[0] if photos else None
+
+        templates = self.config.get_scenario_data(scenario["id"])
+        if not templates:
+            print("❌ No edit templates available")
+            return inputs
+
+        print("\nAvailable Edit Templates:")
+        for i, template in enumerate(templates, 1):
+            print(f"{i}. {template['name']} ({template['category']})")
+            print(f"   {template['description']}")
+
+        print(f"\nSelect template (1-{len(templates)}):")
+        try:
+            template_idx = int(input("> ").strip()) - 1
+            if 0 <= template_idx < len(templates):
+                selected_template = templates[template_idx]
+                print(f"  ✓ Selected: {selected_template['name']}")
+            else:
+                print("Invalid selection. Using first template.")
+                selected_template = templates[0]
+        except ValueError:
+            selected_template = templates[0]
+
+        inputs["template"] = selected_template
+
+        field_values = {}
+        for field in selected_template.get("fields", []):
+            print(f"\n{field['label']}")
+            if field['type'] == 'text':
+                if field.get('required'):
+                    while True:
+                        value = input(f"> ").strip()
+                        if value:
+                            field_values[field['name']] = value
+                            break
+                        print(f"  ❌ This field is required")
+                else:
+                    value = input(f"> [{field.get('placeholder', '')}]: ").strip()
+                    field_values[field['name']] = value if value else field.get('default', '')
+
+            elif field['type'] == 'select':
+                options = field.get('options', [])
+                print("Options:")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                try:
+                    default_val = field.get('default', options[0] if options else '')
+                    idx_input = input(f"> [{default_val}]: ").strip()
+                    if idx_input:
+                        idx = int(idx_input) - 1
+                        if 0 <= idx < len(options):
+                            field_values[field['name']] = options[idx]
+                        else:
+                            field_values[field['name']] = default_val
+                    else:
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', options[0] if options else '')
+
+            elif field['type'] == 'multiselect':
+                options = field.get('options', [])
+                print("Options (comma-separated numbers):")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                indices = input(f"> [{field.get('default', '')}]: ").strip()
+                try:
+                    if indices:
+                        idx_list = [int(x.strip()) - 1 for x in indices.split(',')]
+                        selected = [options[i] for i in idx_list if 0 <= i < len(options)]
+                        field_values[field['name']] = ", ".join(selected)
+                    else:
+                        default_val = field.get('default', '')
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', '')
+
+            elif field['type'] == 'boolean':
+                default_val = field.get('default', True)
+                value = input(f"> [y/n, default: {'y' if default_val else 'n'}]: ").strip().lower()
+                if value in ['y', 'n']:
+                    field_values[field['name']] = value == 'y'
+                else:
+                    field_values[field['name']] = default_val
+
+        inputs["field_values"] = field_values
+
+        prompt_structure = selected_template.get("prompt_structure", "")
+        field_values_with_default = {"原照片的": "参考"}
+        field_values_with_default.update(field_values)
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        inputs["prompt"] = full_prompt
+        inputs["negative_prompt"] = selected_template.get("negative_prompt", "")
+        inputs["image_count"] = selected_template.get("default_count", 1)
+
+        print("\n✅ Edit input collection complete!")
+        return inputs
+
+    def collect_fusion_inputs(self, scenario, inputs):
+        """
+        Collect inputs for fusion scenario
+        """
+        print("\n" + "=" * 60)
+        print("🔀 Multi-Image Fusion")
+        print("=" * 60)
+
+        inputs = {}
+
+        photos = self.collect_photos_for_scenario(scenario)
+        inputs["photos"] = photos
+
+        templates = self.config.get_scenario_data(scenario["id"])
+        if not templates:
+            print("❌ No fusion templates available")
+            return inputs
+
+        print("\nAvailable Fusion Templates:")
+        for i, template in enumerate(templates, 1):
+            print(f"{i}. {template['name']} ({template['category']})")
+            print(f"   {template['description']}")
+            print(f"   Required photos: {template['required_photos']}-{template['max_photos']}")
+
+        print(f"\nSelect template (1-{len(templates)}):")
+        try:
+            template_idx = int(input("> ").strip()) - 1
+            if 0 <= template_idx < len(templates):
+                selected_template = templates[template_idx]
+                print(f"  ✓ Selected: {selected_template['name']}")
+            else:
+                print("Invalid selection. Using first template.")
+                selected_template = templates[0]
+        except ValueError:
+            selected_template = templates[0]
+
+        inputs["template"] = selected_template
+
+        field_values = {}
+        for field in selected_template.get("fields", []):
+            print(f"\n{field['label']}")
+            if field['type'] == 'text':
+                if field.get('required'):
+                    while True:
+                        value = input(f"> ").strip()
+                        if value:
+                            field_values[field['name']] = value
+                            break
+                        print(f"  ❌ This field is required")
+                else:
+                    value = input(f"> [{field.get('placeholder', '')}]: ").strip()
+                    field_values[field['name']] = value if value else field.get('default', '')
+
+            elif field['type'] == 'select':
+                options = field.get('options', [])
+                print("Options:")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                try:
+                    default_val = field.get('default', options[0] if options else '')
+                    idx_input = input(f"> [{default_val}]: ").strip()
+                    if idx_input:
+                        idx = int(idx_input) - 1
+                        if 0 <= idx < len(options):
+                            field_values[field['name']] = options[idx]
+                        else:
+                            field_values[field['name']] = default_val
+                    else:
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', options[0] if options else '')
+
+            elif field['type'] == 'multiselect':
+                options = field.get('options', [])
+                print("Options (comma-separated numbers):")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                indices = input(f"> [{field.get('default', '')}]: ").strip()
+                try:
+                    if indices:
+                        idx_list = [int(x.strip()) - 1 for x in indices.split(',')]
+                        selected = [options[i] for i in idx_list if 0 <= i < len(options)]
+                        field_values[field['name']] = ", ".join(selected)
+                    else:
+                        default_val = field.get('default', '')
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', '')
+
+            elif field['type'] == 'boolean':
+                default_val = field.get('default', True)
+                value = input(f"> [y/n, default: {'y' if default_val else 'n'}]: ").strip().lower()
+                if value in ['y', 'n']:
+                    field_values[field['name']] = value == 'y'
+                else:
+                    field_values[field['name']] = default_val
+
+        inputs["field_values"] = field_values
+
+        prompt_structure = selected_template.get("prompt_structure", "")
+        photo_count = len(photos)
+        person_instructions = " ".join([
+            f"Person {j+1}: Extract facial features, gender, age, and appearance from reference photo #{j+1} only."
+            for j in range(photo_count)
+        ])
+        field_values_with_default = {
+            "photo_count": photo_count,
+            "person_instructions": person_instructions
+        }
+        field_values_with_default.update(field_values)
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        inputs["prompt"] = full_prompt
+        inputs["negative_prompt"] = selected_template.get("negative_prompt", "")
+        inputs["image_count"] = selected_template.get("default_count", 1)
+
+        print("\n✅ Fusion input collection complete!")
+        return inputs
+
+    def collect_series_inputs(self, scenario, inputs):
+        """
+        Collect inputs for series scenario
+        """
+        print("\n" + "=" * 60)
+        print("🖼️  Series Generation")
+        print("=" * 60)
+
+        inputs = {}
+
+        photos = self.collect_photos_for_scenario(scenario)
+        inputs["user_photo"] = photos[0] if photos else None
+
+        templates = self.config.get_scenario_data(scenario["id"])
+        if not templates:
+            print("❌ No series templates available")
+            return inputs
+
+        print("\nAvailable Series Templates:")
+        for i, template in enumerate(templates, 1):
+            print(f"{i}. {template['name']} ({template['category']})")
+            print(f"   {template['description']}")
+
+        print(f"\nSelect template (1-{len(templates)}):")
+        try:
+            template_idx = int(input("> ").strip()) - 1
+            if 0 <= template_idx < len(templates):
+                selected_template = templates[template_idx]
+                print(f"  ✓ Selected: {selected_template['name']}")
+            else:
+                print("Invalid selection. Using first template.")
+                selected_template = templates[0]
+        except ValueError:
+            selected_template = templates[0]
+
+        inputs["template"] = selected_template
+
+        field_values = {}
+        for field in selected_template.get("fields", []):
+            print(f"\n{field['label']}")
+            if field['type'] == 'text':
+                if field.get('required'):
+                    while True:
+                        value = input(f"> ").strip()
+                        if value:
+                            field_values[field['name']] = value
+                            break
+                        print(f"  ❌ This field is required")
+                else:
+                    value = input(f"> [{field.get('placeholder', '')}]: ").strip()
+                    field_values[field['name']] = value if value else field.get('default', '')
+
+            elif field['type'] == 'select':
+                options = field.get('options', [])
+                print("Options:")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                try:
+                    default_val = field.get('default', options[0] if options else '')
+                    idx_input = input(f"> [{default_val}]: ").strip()
+                    if idx_input:
+                        idx = int(idx_input) - 1
+                        if 0 <= idx < len(options):
+                            field_values[field['name']] = options[idx]
+                        else:
+                            field_values[field['name']] = default_val
+                    else:
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', options[0] if options else '')
+
+            elif field['type'] == 'multiselect':
+                options = field.get('options', [])
+                print("Options (comma-separated numbers):")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                indices = input(f"> [{field.get('default', '')}]: ").strip()
+                try:
+                    if indices:
+                        idx_list = [int(x.strip()) - 1 for x in indices.split(',')]
+                        selected = [options[i] for i in idx_list if 0 <= i < len(options)]
+                        field_values[field['name']] = ", ".join(selected)
+                    else:
+                        default_val = field.get('default', '')
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', '')
+
+            elif field['type'] == 'boolean':
+                default_val = field.get('default', True)
+                value = input(f"> [y/n, default: {'y' if default_val else 'n'}]: ").strip().lower()
+                if value in ['y', 'n']:
+                    field_values[field['name']] = value == 'y'
+                else:
+                    field_values[field['name']] = default_val
+
+        inputs["field_values"] = field_values
+
+        prompt_structure = selected_template.get("prompt_structure", "")
+        field_values_with_default = {"原照片的": "参考"}
+        field_values_with_default.update(field_values)
+
+        template_id = selected_template.get('id', '')
+        if template_id == 'seasons':
+            count = field_values.get('count', 4)
+            scene_instructions = f"场景统一为：{field_values.get('scene', '户外庭院')}。"
+
+            seasonal_descriptions = "\n各季节描述：\n"
+            seasons = [
+                ("春天", "嫩绿新叶，粉红花朵，柔和晨光，生机勃勃"),
+                ("夏天", "翠绿浓荫，金色阳光，强烈日光，热情洋溢"),
+                ("秋天", "橙红落叶，金黄果实，温暖黄昏，丰收喜悦"),
+                ("冬天", "银白雪地，深蓝天空，冷清冬阳，静谧纯净")
+            ]
+            for i, (season, desc) in enumerate(seasons[:count]):
+                seasonal_descriptions += f"图片{i+1}：{season} - {desc}。\n"
+
+            field_values_with_default['count'] = count
+            field_values_with_default['scene_instructions'] = scene_instructions
+            field_values_with_default['seasonal_descriptions'] = seasonal_descriptions
+
+        elif template_id == 'character-states':
+            count = field_values.get('count', 4)
+            state_type = field_values.get('state_type', '动作状态')
+            custom_states = field_values.get('custom_states', '')
+
+            state_descriptions = "\n各状态描述：\n"
+            if custom_states:
+                states = custom_states.split('、')
+                for i, state in enumerate(states[:count]):
+                    state_descriptions += f"图片{i+1}：{state.strip()}。\n"
+            else:
+                default_states = {
+                    "动作状态": ["奔跑", "跳跃", "静止", "转身"],
+                    "表情状态": ["开心", "惊讶", "思考", "平静"],
+                    "服装变化": ["日常装", "运动装", "正式装", "休闲装"],
+                    "道具互动": ["手持相机", "抱着玩偶", "拿着书本", "背着背包"]
+                }
+                states = default_states.get(state_type, default_states["动作状态"])
+                for i, state in enumerate(states[:count]):
+                    state_descriptions += f"图片{i+1}：{state}。\n"
+
+            field_values_with_default['count'] = count
+            field_values_with_default['state_descriptions'] = state_descriptions
+
+        elif template_id == 'story-sequence':
+            count = field_values.get('count', 6)
+            theme = field_values.get('theme', '奇幻冒险')
+
+            story_outline = f"故事大纲：{theme}。"
+
+            scene_descriptions = "\n场景描述：\n"
+            scene_stages = [
+                "故事开端，介绍主角和初始环境",
+                "发展情节，主角面临挑战或机会",
+                "情节升级，主角采取行动或做出选择",
+                "高潮时刻，关键冲突或转折点",
+                "解决阶段，主角克服困难或达成目标",
+                "结局，展示结果和成长"
+            ]
+            for i in range(min(count, len(scene_stages))):
+                scene_descriptions += f"图片{i+1}：{scene_stages[i]}。\n"
+
+            field_values_with_default['count'] = count
+            field_values_with_default['story_outline'] = story_outline
+            field_values_with_default['scene_descriptions'] = scene_descriptions
+
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        inputs["prompt"] = full_prompt
+        inputs["negative_prompt"] = selected_template.get("negative_prompt", "")
+        inputs["image_count"] = selected_template.get("default_count", 1)
+
+        print("\n✅ Series input collection complete!")
+        return inputs
+
+    def collect_poster_inputs(self, scenario, inputs):
+        """
+        Collect inputs for poster scenario
+        """
+        print("\n" + "=" * 60)
+        print("📄 Poster Design")
+        print("=" * 60)
+
+        inputs = {}
+
+        required_photos = scenario.get("required_photos", 0)
+        if required_photos > 0:
+            photos = self.collect_photos_for_scenario(scenario)
+            inputs["user_photo"] = photos[0] if photos else None
+        else:
+            print("✓ Photo is optional. You can generate poster without reference image.")
+            inputs["user_photo"] = None
+
+        templates = self.config.get_scenario_data(scenario["id"])
+        if not templates:
+            print("❌ No poster templates available")
+            return inputs
+
+        print("\nAvailable Poster Templates:")
+        for i, template in enumerate(templates, 1):
+            print(f"{i}. {template['name']} ({template['category']})")
+            print(f"   {template['description']}")
+
+        print(f"\nSelect template (1-{len(templates)}):")
+        try:
+            template_idx = int(input("> ").strip()) - 1
+            if 0 <= template_idx < len(templates):
+                selected_template = templates[template_idx]
+                print(f"  ✓ Selected: {selected_template['name']}")
+            else:
+                print("Invalid selection. Using first template.")
+                selected_template = templates[0]
+        except ValueError:
+            selected_template = templates[0]
+
+        inputs["template"] = selected_template
+
+        field_values = {}
+        for field in selected_template.get("fields", []):
+            print(f"\n{field['label']}")
+            if field['type'] == 'text':
+                if field.get('required'):
+                    while True:
+                        value = input(f"> ").strip()
+                        if value:
+                            field_values[field['name']] = value
+                            break
+                        print(f"  ❌ This field is required")
+                else:
+                    value = input(f"> [{field.get('placeholder', '')}]: ").strip()
+                    field_values[field['name']] = value if value else field.get('default', '')
+
+            elif field['type'] == 'select':
+                options = field.get('options', [])
+                print("Options:")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                try:
+                    default_val = field.get('default', options[0] if options else '')
+                    idx_input = input(f"> [{default_val}]: ").strip()
+                    if idx_input:
+                        idx = int(idx_input) - 1
+                        if 0 <= idx < len(options):
+                            field_values[field['name']] = options[idx]
+                        else:
+                            field_values[field['name']] = default_val
+                    else:
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', options[0] if options else '')
+
+            elif field['type'] == 'multiselect':
+                options = field.get('options', [])
+                print("Options (comma-separated numbers):")
+                for i, opt in enumerate(options, 1):
+                    print(f"  {i}. {opt}")
+                indices = input(f"> [{field.get('default', '')}]: ").strip()
+                try:
+                    if indices:
+                        idx_list = [int(x.strip()) - 1 for x in indices.split(',')]
+                        selected = [options[i] for i in idx_list if 0 <= i < len(options)]
+                        field_values[field['name']] = ", ".join(selected)
+                    else:
+                        default_val = field.get('default', '')
+                        field_values[field['name']] = default_val
+                except ValueError:
+                    field_values[field['name']] = field.get('default', '')
+
+            elif field['type'] == 'boolean':
+                default_val = field.get('default', True)
+                value = input(f"> [y/n, default: {'y' if default_val else 'n'}]: ").strip().lower()
+                if value in ['y', 'n']:
+                    field_values[field['name']] = value == 'y'
+                else:
+                    field_values[field['name']] = default_val
+
+        inputs["field_values"] = field_values
+
+        prompt_structure = selected_template.get("prompt_structure", "")
+        field_values_with_default = {"原照片的": "参考"}
+        field_values_with_default.update(field_values)
+
+        full_prompt = prompt_structure.format(**field_values_with_default)
+
+        inputs["prompt"] = full_prompt
+        inputs["negative_prompt"] = selected_template.get("negative_prompt", "")
+        inputs["image_count"] = selected_template.get("default_count", 1)
+
+        print("\n✅ Poster input collection complete!")
         return inputs

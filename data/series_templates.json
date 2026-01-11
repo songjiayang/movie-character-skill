@@ -1,0 +1,164 @@
+{
+  "templates": [
+    {
+      "id": "seasons",
+      "name": "四季主题",
+      "category": "组图",
+      "description": "同一场景的四季变迁插画",
+      "required_photos": 1,
+      "max_photos": 1,
+      "default_count": 4,
+      "prompt_structure": "生成{count}张连贯的四季主题组图，核心为{theme}。\n\n{scene_instructions}\n\n{seasonal_descriptions}\n\nIMPORTANT:\n- 所有图片必须保持统一的{style}风格。\n- 主色调随季节变化：春天（嫩绿、粉红）、夏天（翠绿、金色）、秋天（橙红、金黄）、冬天（银白、深蓝）。\n- 人物的面部特征、性别、年龄、体态要从参考图提取并保持一致。\n- 人物在所有图片中都要清晰可辨，保持相同的姿态和表情特征。\n- 背景要随季节自然变化，展示四季的不同景观特征。\n- 光影要符合季节特点：春天（柔和晨光）、夏天（强烈日光）、秋天（温暖黄昏）、冬天（冷清冬阳）。\n- 构图要保持统一的视角和比例，确保组图连贯性。\nHigh quality, detailed, {style} style, artistic, 8k resolution.",
+      "fields": [
+        {
+          "name": "theme",
+          "label": "核心主题",
+          "type": "text",
+          "placeholder": "同一庭院的四季变迁、同一建筑的四季、同一街道的四季...",
+          "required": true
+        },
+        {
+          "name": "style",
+          "label": "艺术风格",
+          "type": "select",
+          "options": ["插画风格", "水彩画风格", "油画风格", "动漫风格", "写实摄影风格"],
+          "default": "插画风格"
+        },
+        {
+          "name": "scene",
+          "label": "场景类型",
+          "type": "select",
+          "options": ["户外庭院", "城市街道", "田园风光", "公园长椅", "山顶景色", "湖畔景色"],
+          "default": "户外庭院"
+        },
+        {
+          "name": "count",
+          "label": "生成数量",
+          "type": "select",
+          "options": [4, 6, 8],
+          "default": 4
+        }
+      ]
+    },
+    {
+      "id": "brand-kit",
+      "name": "品牌整套视觉",
+      "category": "组图",
+      "description": "基于LOGO设计统一的品牌视觉系列",
+      "required_photos": 1,
+      "max_photos": 1,
+      "default_count": 4,
+      "prompt_structure": "基于参考LOGO，设计一套品牌视觉。\n\n品牌名称：{brand_name}。\n视觉主色调：{color}。\n设计风格：{style}。\n需要设计的物品：{items}。\n\nIMPORTANT:\n- 所有物品要保持统一的品牌风格，视觉识别度高。\n- 每个物品都要体现品牌的核心特征和设计语言。\n- 色彩搭配要统一使用{color}作为主色调，可搭配辅助色。\n- 设计要符合{style}的美学标准和设计规范。\n- 不同物品之间要在风格、字体、图标等元素上保持一致性。\n- 产品展示要清晰、专业、美观。\nHigh quality, professional brand design, consistent visual identity, {style} style, 8k resolution.",
+      "fields": [
+        {
+          "name": "brand_name",
+          "label": "品牌名称",
+          "type": "text",
+          "placeholder": "品牌中文名或英文名",
+          "required": true
+        },
+        {
+          "name": "color",
+          "label": "主色调",
+          "type": "select",
+          "options": ["红色", "蓝色", "绿色", "黄色", "橙色", "紫色", "黑色", "白色"],
+          "default": "绿色"
+        },
+        {
+          "name": "style",
+          "label": "设计风格",
+          "type": "select",
+          "options": ["简约现代", "趣味可爱", "商务专业", "科技未来", "复古经典", "自然清新"],
+          "default": "简约现代"
+        },
+        {
+          "name": "items",
+          "label": "需要设计的物品",
+          "type": "multiselect",
+          "options": ["包装袋", "帽子", "卡片", "挂绳", "T恤", "杯子", "笔记本", "海报", "名片", "贴纸"],
+          "default": "包装袋,帽子,卡片,挂绳"
+        },
+        {
+          "name": "count",
+          "label": "生成数量",
+          "type": "select",
+          "options": [4, 6, 8],
+          "default": 4
+        }
+      ]
+    },
+    {
+      "id": "character-states",
+      "name": "角色状态变体",
+      "category": "组图",
+      "description": "同一角色的不同状态或动作",
+      "required_photos": 1,
+      "max_photos": 1,
+      "default_count": 4,
+      "prompt_structure": "生成{count}张同一角色的不同状态图片，角色位于{scene}。\n\n{state_descriptions}\n\nIMPORTANT:\n- 所有图片中的角色面部特征、性别、年龄、体态必须完全一致。\n- 角色的服装、发型、配饰要保持统一。\n- 每张图片展示一个不同的{state_type}状态。\n- 背景要统一为{scene}，营造一致的环境氛围。\n- 光影风格要统一，确保组图的视觉一致性。\n- 表情和姿态要根据状态描述自然变化。\n- 构图要保持统一的视角和风格。\nHigh quality, detailed faces, realistic skin texture, consistent character appearance, 8k resolution, photorealistic.",
+      "fields": [
+        {
+          "name": "scene",
+          "label": "场景描述",
+          "type": "select",
+          "options": ["游乐园", "森林探险", "城市街道", "海边度假", "办公室", "咖啡厅", "校园"],
+          "default": "游乐园"
+        },
+        {
+          "name": "state_type",
+          "label": "状态类型",
+          "type": "select",
+          "options": ["动作状态", "表情状态", "服装变化", "道具互动"],
+          "default": "动作状态"
+        },
+        {
+          "name": "custom_states",
+          "label": "自定义状态（可选）",
+          "type": "text",
+          "placeholder": "戴墨镜、骑摩托、戴帽子、拿棒棒糖...",
+          "required": false
+        },
+        {
+          "name": "count",
+          "label": "生成数量",
+          "type": "select",
+          "options": [4, 6, 8],
+          "default": 4
+        }
+      ]
+    },
+    {
+      "id": "story-sequence",
+      "name": "故事序列",
+      "category": "组图",
+      "description": "创作连贯的故事序列插图",
+      "required_photos": 1,
+      "max_photos": 1,
+      "default_count": 6,
+      "prompt_structure": "创作{count}张连贯的故事序列插图，故事主题为{theme}。\n\n{story_outline}\n\n{scene_descriptions}\n\nIMPORTANT:\n- 所有图片要构成连贯的故事叙事，时间顺序清晰。\n- 人物的面部特征、性别、年龄、体态要从参考图提取并保持一致。\n- 人物服装、配饰要统一，展现故事中的同一角色。\n- 场景要根据故事情节自然变化，展现不同的故事背景。\n- 每张图片要清晰表达故事的一个关键情节。\n- 光影和色调要随着故事进展有适当的变化。\n- 构图和视角要统一，确保组图的视觉连贯性。\n- 情感要随着故事推进自然演变。\nHigh quality, detailed, narrative illustration, {style} style, 8k resolution.",
+      "fields": [
+        {
+          "name": "theme",
+          "label": "故事主题",
+          "type": "text",
+          "placeholder": "小猫的奇幻冒险、少年勇者的冒险之旅、魔法森林的奇遇...",
+          "required": true
+        },
+        {
+          "name": "style",
+          "label": "艺术风格",
+          "type": "select",
+          "options": ["温馨童趣", "热血动漫", "梦幻童话", "写实电影", "唯美插画"],
+          "default": "温馨童趣"
+        },
+        {
+          "name": "count",
+          "label": "生成数量",
+          "type": "select",
+          "options": [4, 6, 8, 10],
+          "default": 6
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "templates": [
+    {
+      "id": "change-clothing",
+      "name": "换衣服",
+      "category": "编辑",
+      "description": "保持姿势不变，只更换服装",
+      "required_photos": 1,
+      "max_photos": 1,
+      "prompt_structure": "保持{原照片的}姿势、体态、面部特征不变。\n更换服装为：{clothing}。\n服装风格：{style}。\nIMPORTANT: ONLY change the clothing - keep original pose, body position, facial features, and background exactly the same as reference photo.\nHigh quality, detailed, realistic.",
+      "fields": [
+        {
+          "name": "clothing",
+          "label": "服装描述",
+          "type": "text",
+          "placeholder": "运动外套、连衣裙、西装...",
+          "required": true
+        },
+        {
+          "name": "style",
+          "label": "服装风格",
+          "type": "select",
+          "options": ["休闲", "正式", "运动", "时尚", "复古", "古风"],
+          "default": "休闲"
+        }
+      ]
+    },
+    {
+      "id": "change-material",
+      "name": "换材质",
+      "category": "编辑",
+      "description": "将服装或物品的材质替换为其他材质",
+      "required_photos": 1,
+      "max_photos": 1,
+      "prompt_structure": "保持{原照片的}姿势、体态和面部特征不变。\n将{from_material}材质改为{to_material}材质。\nIMPORTANT: 保持服装的流动形状不变，只改变材质效果。\n{如果指定了描述光影，添加光影变化描述}。\nHigh quality, detailed, realistic.",
+      "fields": [
+        {
+          "name": "from_material",
+          "label": "原材质",
+          "type": "text",
+          "placeholder": "金属、布料、塑料...",
+          "required": true
+        },
+        {
+          "name": "to_material",
+          "label": "新材质",
+          "type": "text",
+          "placeholder": "透明水流、玻璃、绒毛、皮革...",
+          "required": true
+        },
+        {
+          "name": "describe_lighting",
+          "label": "描述光影变化",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "change-background",
+      "name": "换背景",
+      "category": "编辑",
+      "description": "保持人物不变，只更换背景场景",
+      "required_photos": 1,
+      "max_photos": 1,
+      "prompt_structure": "保持{原照片的}人物面部特征、身体姿态、穿着服装完全不变。\n更换背景为：{background}。\n光照要求：{lighting}。\nIMPORTANT: 人物与背景的光影要自然融合，色调要协调。\nHigh quality, detailed, realistic, seamless composition.",
+      "fields": [
+        {
+          "name": "background",
+          "label": "新背景描述",
+          "type": "text",
+          "placeholder": "城市天际线、森林、海滩、工作室...",
+          "required": true
+        },
+        {
+          "name": "lighting",
+          "label": "光照要求",
+          "type": "select",
+          "options": ["自然光", "黄昏光", "晨光", "夜景灯光", "影棚光"],
+          "default": "自然光"
+        }
+      ]
+    },
+    {
+      "id": "change-style",
+      "name": "换风格",
+      "category": "编辑",
+      "description": "保持人物，改变整体艺术风格",
+      "required_photos": 1,
+      "max_photos": 1,
+      "prompt_structure": "保持{原照片的}人物面部特征不变。\n整体风格改为：{style}。\nIMPORTANT: 风格要体现在色彩、光影、质感、构图等方面。\nHigh quality, {style} style, artistic, detailed.",
+      "fields": [
+        {
+          "name": "style",
+          "label": "目标风格",
+          "type": "select",
+          "options": ["油画", "水彩画", "素描", "复古摄影", "赛博朋克", "动漫风格", "浮世绘"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "enhance-portrait",
+      "name": "人像优化",
+      "category": "编辑",
+      "description": "保持人物特征，优化人像效果",
+      "required_photos": 1,
+      "max_photos": 1,
+      "prompt_structure": "保持{原照片的}人物面部特征、表情、身体姿势和背景完全不变。\n优化效果：{enhancements}。\nIMPORTANT: ONLY apply enhancements to skin quality, lighting, and details - keep pose, facial features, expression, and background exactly the same as reference photo.\nHigh quality, enhanced portrait, professional photography.",
+      "fields": [
+        {
+          "name": "enhancements",
+          "label": "优化项目",
+          "type": "multiselect",
+          "options": ["改善肤质", "增加光泽", "增强轮廓", "优化眼神", "美化发型"],
+          "default": "改善肤质"
+        }
+      ]
+    }
+  ]
+}
