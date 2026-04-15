@@ -1,6 +1,6 @@
 ---
 name: photo-studio-skill
-description: Generate professional AI-enhanced photos using ByteDance Seedream 4.5 model. Use when users want to, (1) Create portraits with various styles, (2) Generate couple or family group photos, (3) Take photos with movie characters, (4) Edit images (change clothing, background, material, style), (5) Merge multiple photos (outfit fusion, person-scenery fusion, brand design), (6) Create series of related images (seasons, character states, story sequences), (7) Design posters (movie, event, product), or (8) Use custom prompts with full creative control.
+description: "Generate professional AI-enhanced photos using ByteDance Seedream 4.5 model. Use when users want to, (1) Create portraits with various styles, (2) Generate couple or family group photos, (3) Take photos with movie characters, (4) Edit images (change clothing, background, material, style), (5) Merge multiple photos (outfit fusion, person-scenery fusion, brand design), (6) Create series of related images (seasons, character states, story sequences), (7) Design posters (movie, event, product), or (8) Use custom prompts with full creative control."
 ---
 
 # Photo Studio
@@ -21,7 +21,9 @@ python scripts/main.py generate --photo "$USER_PHOTO" --scenario portrait --non-
 
 1. **Select scenario** from 9 options: celebrity, portrait, couple, family, edit, fusion, series, poster, free
 2. **Provide inputs**: photos, styles, templates, prompts based on scenario
+   - **Validate**: Ensure photos exist and meet minimum resolution (≥1024×1024). Check with `python scripts/main.py config --show` that `ARK_API_KEY` is configured
 3. **Generate images**: CLI preprocesses photos, calls Seedream 4.5 API, saves results to `output/images/`
+   - **Validate**: Check `logs/` for errors if generation fails. Verify output files exist in `output/images/` before proceeding
 4. **Review and save**: View, reorder, regenerate, or confirm images
 
 ## Essential Commands
@@ -116,8 +118,7 @@ python scripts/main.py cleanup
 pip install -r requirements.txt
 
 # Set API key (required for operation)
-# API key environment variable name: ARK_API_KEY
-# API will return error if key is not properly configured
+export ARK_API_KEY="your_key_here"
 
 # Mock mode for testing without API (optional)
 export MOCK_API=true
@@ -129,33 +130,6 @@ Key settings in `config.json`:
 - `generation.image_width` / `generation.image_height` - Image dimensions (default: 2048)
 - `generation.default_image_count` - Default number of images (default: 5)
 - `scenarios.default_scenario` - Default scenario (default: celebrity)
-
-## File Structure
-
-```
-photo-studio-skill/
- ├── SKILL.md                    # This file
- ├── scripts/                    # Executable CLI tools
- │   └── main.py                # Main entry point
- ├── data/                       # Scenario templates and options
- ├── references/                 # Feature documentation
- │   ├── celebrity.md           # Celebrity photos with movie characters
- │   ├── portrait.md            # Professional personal portraits
- │   ├── couple.md               # Couple/friend portraits
- │   ├── family.md               # Family group photos
- │   ├── edit.md                # Image editing
- │   ├── fusion.md              # Multi-photo fusion
- │   ├── series.md              # Series creation
- │   ├── poster.md              # Poster design
- │   └── free.md                # Free mode with custom prompts
- ├── output/images/             # Generated images
- ├── temp/                      # Temporary files
- ├── logs/                      # Error logs
- ├── config.json                # Configuration settings
- ├── requirements.txt           # Python dependencies
- ├── AGENTS.md                  # Agent development guidelines
- └── README.md                  # Project documentation
-```
 
 ## References
 
@@ -174,35 +148,7 @@ Load these reference files when working with specific features:
 
 ## Technical Notes
 
-### Image Generation
-
-- Model: Seedream 4.5 (`doubao-seedream-4.5-251128`)
-- Resolution: 2048x2048 (configurable)
-- Supports 1-14 reference photos
-- Uses image-to-image generation with user photos as reference
-- Processing time: ~10-20 seconds per image
-
-### Multi-Photo Scenarios
-
-- Couple and family scenarios use multi-reference image fusion
-- Person count controlled via prompt descriptions (not precise)
-
-### Mock Mode Benefits
-
-- No API costs
-- Fast testing (500ms instead of 10-20 seconds)
-- No network dependency
-- Consistent test results
-
-## Troubleshooting
-
-**Image generation fails:**
-- Check internet connection
-- Verify API key is properly configured (see Environment Setup)
-- Ensure photos are clear and well-lit (≥1024×1024 recommended)
-- Check `logs/` directory for detailed errors
-
-**Common issues:**
-- Large photos require more processing time
-- API rate limits may apply
-- Person count in group photos is controlled via prompt (not precise)
+- **Model**: Seedream 4.5 (`doubao-seedream-4.5-251128`), resolution 2048x2048 (configurable)
+- **Reference photos**: Supports 1-14 per generation using image-to-image synthesis
+- **Multi-photo scenarios**: Couple and family use multi-reference fusion; person count is prompt-controlled (approximate)
+- **Mock mode**: Set `MOCK_API=true` to test without API calls or costs
